@@ -1,0 +1,148 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Universal Translator</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div class="background-grid"></div>
+    <div class="background-blur"></div>
+
+    <div class="user-info" id="userInfo">
+        <div class="user-avatar" id="userAvatar">J</div>
+        <div class="user-name" id="userName">John Doe</div>
+        <button class="logout-btn" onclick="logout()">Logout</button>
+    </div>
+
+    <div class="auth-overlay" id="authOverlay">
+        <div class="auth-modal">
+            <button class="close-btn" onclick="closeWindow()">×</button>
+            
+            <div class="auth-header">
+                <h2 id="authTitle">Welcome Back</h2>
+                <p id="authSubtitle">Sign in to access the translator</p>
+            </div>
+
+            <div class="auth-tabs">
+                <button class="auth-tab active" onclick="switchWindow('signin')" id="signinTab">Sign In</button>
+                <button class="auth-tab" onclick="switchWindow('signup')" id="signupTab">Sign Up</button>
+            </div>
+
+            <form class="auth-form" id="authForm" onsubmit="signUpAndSignIn(event)">
+                <div class="form-group" id="nameGroup" style="display: none;">
+                    <label class="form-label">Full Name</label>
+                    <input type="text" class="form-input" id="nameInput" placeholder="Enter your full name">
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label">Email</label>
+                    <input type="email" class="form-input" id="emailInput" placeholder="Enter your email" required>
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label">Password</label>
+                    <input type="password" class="form-input" id="passwordInput" placeholder="Enter your password" required>
+                </div>
+
+                <div class="form-group" id="confirmPasswordGroup" style="display: none;">
+                    <label class="form-label">Confirm Password</label>
+                    <input type="password" class="form-input" id="confirmPasswordInput" placeholder="Confirm your password">
+                </div>
+
+                <div class="auth-actions">
+                    <button type="submit" class="auth-btn" id="authSubmitBtn">Sign In</button>
+                </div>
+
+                <div class="forgot-link" id="forgotLink">
+                    <a href="#" onclick="showForgotPassword()">Forgot your password?</a>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <div class="container">
+        <div class="header">
+            <h1>Universal Translator</h1>
+            <p>Break down language barriers with precision</p>
+        </div>
+
+        <div class="translator-interface">
+            <div class="panel">
+                <div class="panel-header">
+                    <div class="panel-title">Source Text</div>
+                    <div class="language-selector">
+                        <select class="language-dropdown" id="inputLang">
+                            <option value="auto">Auto Detect</option>
+                            <option value="en">English</option>
+                            <option value="es">Spanish</option>
+                            <option value="fr">French</option>
+                            <option value="de">German</option>
+                            <option value="it">Italian</option>
+                            <option value="pt">Portuguese</option>
+                            <option value="ru">Russian</option>
+                            <option value="ja">Japanese</option>
+                            <option value="ko">Korean</option>
+                            <option value="zh">Chinese</option>
+                            <option value="ar">Arabic</option>
+                            <option value="hi">Hindi</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="text-container">
+                    <textarea 
+                        class="text-area" 
+                        id="inputText"
+                        placeholder="Enter text to translate..."
+                        maxlength="5000"
+                    ></textarea>
+                    <div class="word-count" id="wordCount">0 / 5000</div>
+                </div>
+            </div>
+
+            <div class="panel">
+                <div class="panel-header">
+                    <div class="panel-title">Translation</div>
+                    <div class="language-selector">
+                        <select class="language-dropdown" id="outputLang">
+                            <option value="en">English</option>
+                            <option value="es">Spanish</option>
+                            <option value="fr">French</option>
+                            <option value="de">German</option>
+                            <option value="it">Italian</option>
+                            <option value="pt">Portuguese</option>
+                            <option value="ru">Russian</option>
+                            <option value="ja">Japanese</option>
+                            <option value="ko">Korean</option>
+                            <option value="zh">Chinese</option>
+                            <option value="ar">Arabic</option>
+                            <option value="hi">Hindi</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="text-container">
+                    <textarea 
+                        class="text-area output-area" 
+                        id="outputText"
+                        placeholder="Translation will appear here..."
+                        readonly
+                    ></textarea>
+                    <button class="copy-btn" id="copyBtn" onclick="copyTranslation()">Copy</button>
+                </div>
+            </div>
+        </div>
+
+        <div class="controls">
+            <button class="btn btn-primary" id="translateBtn" onclick="translateText()">
+                Translate
+            </button>
+            <button class="btn btn-secondary" id="clearBtn" onclick="clearText()">
+                Clear All
+            </button>
+        </div>
+    </div>
+
+    <script src="script.js"></script>
+</body>
+</html>
