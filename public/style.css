@@ -681,3 +681,126 @@ body {
         font-size: 1.5rem;
     }
 }
+/* --- Required CSS Variables --- */
+/* These are needed for the toggle button to render correctly. */
+/* You can customize these values to fit your design. */
+:root {
+    /* Dark Theme Variables */
+    --panel-bg: rgba(255, 255, 255, 0.02);
+    --panel-border: rgba(255, 255, 255, 0.08);
+    --input-border: rgba(255, 255, 255, 0.08);
+    --btn-primary-bg: rgba(255, 255, 255, 0.9);
+    --panel-shadow: 0 8px 32px rgba(0, 0, 0, 0.3), inset 0 1px 0 rgba(255, 255, 255, 0.1);
+}
+
+html[data-theme="light"] {
+    /* Light Theme Variables */
+    --panel-bg: rgba(255, 255, 255, 0.8);
+    --panel-border: rgba(0, 0, 0, 0.08);
+    --input-border: rgba(0, 0, 0, 0.1);
+    --btn-primary-bg: #1d1d1f;
+    --panel-shadow: 0 8px 32px rgba(0, 0, 0, 0.1), inset 0 1px 0 rgba(255, 255, 255, 0.6);
+}
+
+body {
+    /* Basic body styles for demonstration */
+    background-color: #000; /* Default background */
+    transition: background-color 0.5s ease;
+}
+
+html[data-theme="light"] body {
+    background-color: #f5f5f7; /* Light mode background */
+}
+/* --- End of Required Variables --- */
+
+
+/* --- Theme Toggle Styles --- */
+.theme-toggle {
+    position: fixed;
+    top: 20px;
+    right: 20px;
+    z-index: 100;
+    cursor: pointer;
+}
+
+.toggle-track {
+    position: relative;
+    width: 64px;
+    height: 32px;
+    background: var(--panel-bg);
+    backdrop-filter: blur(20px) saturate(180%);
+    -webkit-backdrop-filter: blur(20px) saturate(180%);
+    border: 1px solid var(--panel-border);
+    border-radius: 50px;
+    transition: all 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+    box-shadow: var(--panel-shadow);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 4px;
+    overflow: hidden;
+}
+
+.toggle-track:hover {
+    background: rgba(255, 255, 255, 0.08);
+    border-color: var(--input-border);
+    transform: scale(1.05);
+}
+
+.toggle-sun,
+.toggle-moon {
+    width: 16px;
+    height: 16px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 12px;
+    z-index: 2;
+    transition: all 0.3s ease;
+    opacity: 0.6;
+}
+
+.toggle-thumb {
+    position: absolute;
+    top: 2px;
+    left: 2px;
+    width: 28px;
+    height: 28px;
+    background: var(--btn-primary-bg);
+    border-radius: 50%;
+    transition: all 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+    z-index: 1;
+}
+
+/* Logic for thumb position and icon opacity based on the theme */
+html[data-theme="light"] .toggle-thumb {
+    transform: translateX(32px);
+}
+
+html[data-theme="dark"] .toggle-sun {
+    opacity: 1;
+}
+
+html[data-theme="light"] .toggle-moon {
+    opacity: 1;
+}
+
+
+@media (max-width: 480px) {
+    .theme-toggle {
+        top: 12px;
+        right: 12px;
+    }
+    .toggle-track {
+        width: 56px;
+        height: 28px;
+    }
+    .toggle-thumb {
+        width: 24px;
+        height: 24px;
+    }
+    html[data-theme="light"] .toggle-thumb {
+        transform: translateX(28px);
+    }
+}

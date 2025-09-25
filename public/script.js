@@ -9,6 +9,7 @@ document.addEventListener('DOMContentLoaded', function() {
     setupThemeToggle();
 });
 
+
 function setupThemeToggle() {
     // Check for saved theme preference or prefer-color-scheme
     const savedTheme = localStorage.getItem('theme');
@@ -39,6 +40,7 @@ function setupThemeToggle() {
         }, 500);
     });
 }
+
 
 function setupEventListeners() {
     inputText.addEventListener('input', () => {
@@ -282,7 +284,8 @@ async function translateText() {
             output.value = '';
             if (response.status === 401) {
                
-                logout();
+                l
+ogout();
                 showWindow();
             } else {
                 alert(data.message || 'Translation failed');
@@ -333,3 +336,4 @@ function copyTranslation() {
         });
     }
 }
+
