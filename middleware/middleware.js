@@ -10,15 +10,12 @@ function checkSignUp(req, res, next) {
     if (!name || !email || !password || !confirmPassword) {
         return res.status(400).json({ message: 'All fields are required' });
     }
-
     if (password.length < 6) {
         return res.status(400).json({ message: 'Password must be at least 6 characters long' });
     }
-
     if (password !== confirmPassword) {
         return res.status(400).json({ message: 'Passwords do not match' });
     }
-
     next();
 }
 

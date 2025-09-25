@@ -166,7 +166,7 @@ async function signUpAndSignIn(event) {
         if (response.ok) {
             const token = data.token;
             localStorage.setItem('token', token); 
-            localStorage.setItem('currentUser', JSON.stringify(data.user)); // Store user data
+            localStorage.setItem('currentUser', JSON.stringify(data.user)); 
             currentUser = data.user;
             isAuthenticated = true;
             showUserInfo();
@@ -193,7 +193,7 @@ function logout() {
         isAuthenticated = false;
         currentUser = null;
         localStorage.removeItem('token'); 
-        localStorage.removeItem('currentUser'); // Remove user data
+        localStorage.removeItem('currentUser'); 
         hideUserInfo();
         clearText();
     }
@@ -212,7 +212,7 @@ async function translateText() {
     const input = inputText.value.trim();
     const output = document.getElementById('outputText');
     const btn = document.getElementById('translateBtn');
-    // Fixed: Get the target language from the correct dropdown
+  
     const targetLanguage = document.getElementById('outputLang')?.value || 'en';
 
     if (!input) {
@@ -238,7 +238,7 @@ async function translateText() {
                 'Content-Type': 'application/json',
                 'Authorization': `Bearer ${token}` 
             },
-            // Fixed: Send the correct target language
+          
             body: JSON.stringify({ text: input, targetLang: targetLanguage }) 
         });
 
@@ -249,7 +249,7 @@ async function translateText() {
         } else {
             output.value = '';
             if (response.status === 401) {
-                // Token expired or invalid
+               
                 logout();
                 showWindow();
             } else {
