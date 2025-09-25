@@ -66,6 +66,16 @@ function setupEventListeners() {
             closeWindow();
         }
     });
+    
+    // Add event listener for microphone button
+    document.getElementById('micBtn').addEventListener('click', toggleSpeechRecognition);
+    
+    // Update speech recognition language when input language changes
+    document.getElementById('inputLang').addEventListener('change', function() {
+        if (recognition && this.value !== 'auto') {
+            recognition.lang = this.value;
+        }
+    });
 }
 
 function checkAuthStatus() {
@@ -336,4 +346,3 @@ function copyTranslation() {
         });
     }
 }
-
