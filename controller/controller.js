@@ -3,7 +3,7 @@ const prisma = new PrismaClient();
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 
-const JWT_SECRET = "9f4a7d3a4c0e8a7d1d61caa42a87dfc1454c1a2c19f7075e69f49c842dbd8c3c"; 
+const JWT_SECRET = process.env.JWT_SECRET || "9f4a7d3a4c0e8a7d1d61caa42a87dfc1454c1a2c19f7075e69f49c842dbd8c3c"; 
 
 async function signUp(req, res) {
     const { name, email, password } = req.body;
@@ -20,7 +20,11 @@ async function signUp(req, res) {
 
         const token = jwt.sign({ userId: newUser.id }, JWT_SECRET, { expiresIn: '1h' });
 
-        res.status(201).json({ message: 'User created', user: { id: newUser.id, name: newUser.name, email: newUser.email }, token });
+        res.status(201).json({ 
+            message: 'User created', 
+            user: { id: newUser.id, name: newUser.name, email: newUser.email }, 
+            token 
+        });
     } catch (err) {
         console.error(err);
         res.status(500).json({ message: 'Server error' });
@@ -38,7 +42,11 @@ async function signIn(req, res) {
 
         const token = jwt.sign({ userId: user.id }, JWT_SECRET, { expiresIn: '1h' });
 
-        res.status(200).json({ message: 'Login successful', user: { id: user.id, name: user.name, email: user.email }, token });
+        res.status(200).json({ 
+            message: 'Login successful', 
+            user: { id: user.id, name: user.name, email: user.email }, 
+            token 
+        });
     } catch (err) {
         console.error(err);
         res.status(500).json({ message: 'Server error' });
