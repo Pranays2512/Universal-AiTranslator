@@ -60,6 +60,7 @@ function setupEventListeners() {
             closeWindow();
         }
     });
+<<<<<<< HEAD
     
     document.getElementById('micBtn').addEventListener('click', toggleSpeechRecognition);
     
@@ -79,6 +80,8 @@ function setupEventListeners() {
     });
 
     document.getElementById('imageInput').addEventListener('change', handleImageUpload);
+=======
+>>>>>>> 4aec86f575dd8595923a03631fb39b7e70913aa0
 }
 
 function checkAuthStatus() {
@@ -546,6 +549,7 @@ function copyTranslation() {
             }, 2000);
         });
     }
+<<<<<<< HEAD
 }
 
 // Speech recognition (keeping original functionality)
@@ -629,4 +633,6 @@ function toggleSpeechRecognition() {
             console.error('Speech recognition error', error);
         }
     }
+=======
+>>>>>>> 4aec86f575dd8595923a03631fb39b7e70913aa0
 }
