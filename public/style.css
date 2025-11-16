@@ -182,8 +182,6 @@ html[data-theme="light"] .panel:hover {
     justify-content: space-between;
     align-items: center;
     margin-bottom: 24px;
-    flex-wrap: wrap;
-    gap: 12px;
 }
 
 .panel-title {
@@ -923,7 +921,6 @@ html[data-theme="light"] .logout-btn:hover {
     }
 }
 
-<<<<<<< HEAD
 /* Theme Toggle Styles - MOVED TO LEFT SIDE */
 .theme-toggle {
     position: fixed;
@@ -1019,71 +1016,5 @@ html[data-theme="light"] .toggle-moon {
     }
     html[data-theme="light"] .toggle-thumb {
         transform: translateX(28px);
-=======
-/* Add these styles at the end of your CSS file */
-
-.file-upload-section {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-}
-
-.file-upload-btn {
-    background: rgba(255, 255, 255, 0.06);
-    backdrop-filter: blur(20px);
-    border: 1px solid rgba(255, 255, 255, 0.1);
-    border-radius: 10px;
-    padding: 8px 14px;
-    color: rgba(255, 255, 255, 0.8);
-    cursor: pointer;
-    transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
-    font-size: 0.8rem;
-    font-weight: 400;
-    font-family: inherit;
-    display: inline-flex;
-    align-items: center;
-    gap: 6px;
-}
-
-.file-upload-btn:hover {
-    background: rgba(255, 255, 255, 0.1);
-    border-color: rgba(255, 255, 255, 0.2);
-    transform: scale(1.05);
-    color: #ffffff;
-}
-
-.file-name-display {
-    font-size: 0.75rem;
-    color: rgba(255, 255, 255, 0.6);
-    margin-left: 8px;
-    max-width: 150px;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-}
-
-.panel-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    margin-bottom: 24px;
-    flex-wrap: wrap;
-    gap: 12px;
-}
-
-@media (max-width: 768px) {
-    .file-upload-btn {
-        padding: 6px 10px;
-        font-size: 0.75rem;
-    }
-    
-    .panel-header {
-        flex-direction: column;
-        align-items: flex-start;
-    }
-    
-    .file-upload-section {
-        width: 100%;
->>>>>>> 4aec86f575dd8595923a03631fb39b7e70913aa0
     }
 }
