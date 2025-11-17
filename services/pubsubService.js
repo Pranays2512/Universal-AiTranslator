@@ -58,6 +58,7 @@ async function publish(channel, message) {
         console.error('Publish error:', error && error.message ? error.message : error);
         throw error;
     }
+}
 async function subscribe(channel, handler) {
     if (!channel || typeof handler !== 'function') {
         throw new Error('subscribe requires (channel, handler)');

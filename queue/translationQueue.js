@@ -2,6 +2,7 @@ const Queue = require('bull');
 const translate = require('google-translate-api-x');
 const { redisConfig } = require('../config/redis.js');
 const cacheService = require('../services/cacheService');
+const { publish } = require('../services/pubsubService');
 
 // Create translation queue
 const translationQueue = new Queue('translation', {
@@ -86,6 +87,16 @@ translationQueue.process(async (job) => {
 // Queue event listeners
 translationQueue.on('completed', (job, result) => {
     console.log(`✓ Job ${job.id} completed successfully`);
+    try {
+        publish('translation.completed', {
+            jobId: job.id,
+            userId: result?.userId || job?.data?.userId,
+            originalText: job?.data?.text,
+            translatedText: result?.translatedText || result?.translated || (result && result.text)
+        });
+    } catch (e) {
+        console.error('Failed to publish translation.completed:', e && e.message ? e.message : e);
+    }
 });
 
 translationQueue.on('failed', async (job, err) => {

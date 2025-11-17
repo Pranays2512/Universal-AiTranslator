@@ -89,3 +89,5 @@ server.listen(PORT, async () => {
         }
     }
 });
+
+require('./subscribers/translationSubscriber');
