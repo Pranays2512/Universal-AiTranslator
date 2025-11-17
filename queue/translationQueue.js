@@ -1,6 +1,7 @@
 const Queue = require('bull');
 const translate = require('google-translate-api-x');
 const { redisConfig } = require('../config/redis.js');
+const cacheService = require('../services/cacheService');
 
 // Create translation queue
 const translationQueue = new Queue('translation', {
@@ -20,25 +21,61 @@ const translationQueue = new Queue('translation', {
 const deadLetterQueue = new Queue('translation:failed', {
     redis: redisConfig,
     defaultJobOptions: {
-        removeOnComplete: false,  // Keep failed jobs for review
+        removeOnComplete: false,
         removeOnFail: false
     }
 });
 
 // Process translation jobs
 translationQueue.process(async (job) => {
-    const { text, targetLang, userId, socketId } = job.data;
+    const { text, targetLang, sourceLang = 'auto', userId, socketId } = job.data;
     
     console.log(`Processing translation job ${job.id} for user ${userId}`);
     
     try {
-        const result = await translate(text, { to: targetLang });
+        // Check cache first (double-check in case it was cached after job was queued)
+        const cached = await cacheService.get(text, sourceLang, targetLang);
+        
+        if (cached) {
+            console.log(`✓ Job ${job.id} served from cache`);
+            return {
+                translatedText: cached.translated,
+                detectedLanguage: cached.sourceLang,
+                userId,
+                socketId,
+                cached: true
+            };
+        }
+
+        // Translate if not cached
+        const result = await translate(text, { 
+            from: sourceLang, 
+            to: targetLang 
+        });
+
+        const detectedLang = result.from?.language?.iso || sourceLang;
+
+        // Store in cache
+        await cacheService.set(
+            text,
+            detectedLang,
+            targetLang,
+            result.text,
+            { 
+                userId, 
+                queueProcessed: true,
+                jobId: job.id
+            }
+        );
+
+        console.log(`✓ Job ${job.id} completed and cached`);
         
         return {
             translatedText: result.text,
-            detectedLanguage: result.from?.language?.iso || 'unknown',
+            detectedLanguage: detectedLang,
             userId,
-            socketId
+            socketId,
+            cached: false
         };
     } catch (error) {
         console.error(`Translation job ${job.id} failed:`, error);
@@ -76,7 +113,6 @@ translationQueue.on('failed', async (job, err) => {
             jobId: `dlq-${job.id}`
         });
         
-        // Optionally notify admin/user
         console.error(`⚠️  PERMANENT FAILURE: Job ${job.id} moved to DLQ`);
     }
 });
@@ -139,7 +175,7 @@ async function retryFailedJob(dlqJobId) {
     
     // Re-add to main queue
     const newJob = await translationQueue.add(dlqJob.data.originalJobData, {
-        priority: 1, // High priority for retries
+        priority: 1,
         jobId: `retry-${Date.now()}`
     });
     
@@ -147,7 +183,7 @@ async function retryFailedJob(dlqJobId) {
     return newJob;
 }
 
-// Clean old DLQ jobs (optional - run periodically)
+// Clean old DLQ jobs
 async function cleanOldDLQJobs(daysOld = 30) {
     const jobs = await deadLetterQueue.getCompleted();
     const cutoffDate = new Date();
