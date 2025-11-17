@@ -15,9 +15,9 @@ class CacheService {
         const normalized = text.trim().toLowerCase();
         const hash = crypto
             .createHash('md5')
-            .update(${normalized}:${sourceLang}:${targetLang})
+            .update(`${normalized}:${sourceLang}:${targetLang}`)
             .digest('hex');
-        return translation:${sourceLang}:${targetLang}:${hash};
+        return `translation:${sourceLang}:${targetLang}:${hash}`;
     }
 
     /**
@@ -35,8 +35,8 @@ class CacheService {
                 
                 // Track cache hit
                 await this.incrementHitCount(key);
-                
-                console.log(✓ Cache HIT: ${key.substring(0, 50)}...);
+
+                console.log(`✓ Cache HIT: ${key.substring(0, 50)}...`);
                 return {
                     ...data,
                     cached: true,
@@ -44,7 +44,7 @@ class CacheService {
                 };
             }
 
-            console.log(✗ Cache MISS: ${key.substring(0, 50)}...);
+            console.log(`✗ Cache MISS: ${key.substring(0, 50)}...`);
             return null;
         } catch (error) {
             console.error('Cache get error:', error);
@@ -77,9 +77,9 @@ class CacheService {
             );
 
             // Initialize hit counter
-            await redisClient.set(${key}:hits, 0, 'EX', this.DEFAULT_TTL);
+            await redisClient.set(`${key}:hits`, 0, 'EX', this.DEFAULT_TTL);
 
-            console.log(✓ Cache SET: ${key.substring(0, 50)}...);
+            console.log(`✓ Cache SET: ${key.substring(0, 50)}...`);
             return true;
         } catch (error) {
             console.error('Cache set error:', error);
@@ -92,12 +92,12 @@ class CacheService {
      */
     async incrementHitCount(key) {
         try {
-            const hits = await redisClient.incr(${key}:hits);
+            const hits = await redisClient.incr(`${key}:hits`);
 
             // If translation is popular (>10 hits), extend TTL
             if (hits > 10) {
                 await redisClient.expire(key, this.POPULAR_TTL);
-                console.log(♨  Popular translation, extended TTL: ${hits} hits);
+                console.log(`♨  Popular translation, extended TTL: ${hits} hits`);
             }
 
             return hits;
@@ -119,7 +119,7 @@ class CacheService {
             let popularCount = 0;
 
             for (const key of hitKeys) {
-                const hits = await redisClient.get(${key}:hits);
+                const hits = await redisClient.get(`${key}:hits`);
                 if (hits) {
                     const hitCount = parseInt(hits);
                     totalHits += hitCount;
@@ -157,7 +157,7 @@ class CacheService {
 
                 const [data, hits] = await Promise.all([
                     redisClient.get(key),
-                    redisClient.get(${key}:hits)
+                    redisClient.get(`${key}:hits`)
                 ]);
 
                 if (data && hits) {
@@ -196,7 +196,7 @@ class CacheService {
             if (success) loaded++;
         }
 
-        console.log(✓ Preloaded ${loaded}/${commonPhrases.length} common phrases);
+        console.log(`✓ Preloaded ${loaded}/${commonPhrases.length} common phrases`);
         return loaded;
     }
 
@@ -208,7 +208,7 @@ class CacheService {
             const keys = await redisClient.keys(pattern);
             if (keys.length > 0) {
                 await redisClient.del(...keys);
-                console.log(🗑  Cleared ${keys.length} cache entries);
+                console.log(`🗑  Cleared ${keys.length} cache entries`);
             }
             return keys.length;
         } catch (error) {
@@ -221,7 +221,7 @@ class CacheService {
      * Warm cache with user's history
      */
     async warmUserCache(userId, recentTranslations) {
-        console.log(🔥 Warming cache for user ${userId}...);
+        console.log(`🔥 Warming cache for user ${userId}...`);
 
         let warmed = 0;
         for (const trans of recentTranslations) {
@@ -235,7 +235,7 @@ class CacheService {
             if (success) warmed++;
         }
 
-        console.log(✓ Warmed ${warmed} translations for user ${userId});
+        console.log(`✓ Warmed ${warmed} translations for user ${userId}`);
         return warmed;
     }
 }
