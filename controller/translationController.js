@@ -1,260 +1,178 @@
 const translate = require('google-translate-api-x');
-const { addTranslationJob, getQueueStats } = require('../queue/translationQueue.js');
-const { redisClient } = require('../config/redis.js');
+const { translationQueue, addTranslationJob, getQueueStats } = require('../queue/translationQueue.js');
 const Tesseract = require('tesseract.js');
-const sharp = require('sharp');
+const cacheService = require('../services/cacheService');
 
-// Original REST endpoint (maintains backward compatibility)
 async function handleTranslate(req, res) {
-    try {
-        const { text, targetLang, useQueue } = req.body;
+    const { text, targetLang, sourceLang = 'auto' } = req.body;
 
-        if (!text || !targetLang) {
-            return res.status(400).json({ message: 'Text and target language are required' });
-        }
-        if (text.length > 5000) {
-            return res.status(400).json({ message: 'Text is too long. Maximum 5000 characters allowed.' });
-        }
-
-        if (useQueue) {
-            const job = await addTranslationJob({
-                text,
-                targetLang,
-                userId: req.currentUser.id,
-                socketId: null,
-                priority: 5
-            });
-            
-            return res.json({
-                queued: true,
-                jobId: job.id,
-                message: 'Translation queued for processing'
-            });
-        }
-
-        console.log(`Translating: "${text}" to language: ${targetLang}`);
-        const result = await translate(text, { to: targetLang });
-        console.log(`Translation result: "${result.text}"`);
-
-        const cacheKey = `translation:${Buffer.from(text).toString('base64')}:${targetLang}`;
-        await redisClient.setex(cacheKey, 300, JSON.stringify({
-            translatedText: result.text,
-            detectedLanguage: result.from?.language?.iso || 'unknown'
-        }));
-
-        res.json({ 
-            translatedText: result.text,
-            detectedLanguage: result.from?.language?.iso || 'unknown'
+    if (!text || !targetLang) {
+        return res.status(400).json({ 
+            success: false, 
+            error: 'Text and target language are required' 
         });
-    } catch (err) {
-        console.error('Translation error:', err);
-
-        if (err.message.includes('400')) {
-            res.status(400).json({ message: 'Invalid translation request. Please check your input.' });
-        } else if (err.message.includes('429') || err.message.includes('TooManyRequests')) {
-            res.status(429).json({ message: 'Too many requests. Please wait a moment and try again.' });
-        } else if (err.message.includes('503')) {
-            res.status(503).json({ message: 'Translation service temporarily unavailable. Please try again later.' });
-        } else {
-            res.status(500).json({ message: 'Translation failed. Please try again.' });
-        }
     }
-}
 
-// Helper: Preprocess image with different strategies
-async function preprocessImage(base64Image, strategy = 'normal') {
     try {
-        const base64Data = base64Image.replace(/^data:image\/\w+;base64,/, '');
-        const imageBuffer = Buffer.from(base64Data, 'base64');
+        // Check cache first
+        const cached = await cacheService.get(text, sourceLang, targetLang);
         
-        let processedBuffer;
-        
-        switch (strategy) {
-            case 'inverted':
-                processedBuffer = await sharp(imageBuffer)
-                    .resize({ width: 2000, fit: 'inside', withoutEnlargement: false })
-                    .grayscale()
-                    .normalize()
-                    .negate()
-                    .linear(2.5, -(128 * 2.5) + 128)
-                    .sharpen({ sigma: 2 })
-                    .png()
-                    .toBuffer();
-                break;
-                
-            case 'highcontrast':
-                processedBuffer = await sharp(imageBuffer)
-                    .resize({ width: 2000, fit: 'inside', withoutEnlargement: false })
-                    .grayscale()
-                    .normalize()
-                    .linear(3.0, -(128 * 3.0) + 128)
-                    .sharpen({ sigma: 2 })
-                    .png()
-                    .toBuffer();
-                break;
-                
-            case 'threshold':
-                processedBuffer = await sharp(imageBuffer)
-                    .resize({ width: 2000, fit: 'inside', withoutEnlargement: false })
-                    .grayscale()
-                    .normalize()
-                    .threshold(128)
-                    .png()
-                    .toBuffer();
-                break;
-                
-            default:
-                processedBuffer = await sharp(imageBuffer)
-                    .resize({ width: 2000, fit: 'inside', withoutEnlargement: false })
-                    .grayscale()
-                    .normalize()
-                    .sharpen()
-                    .png()
-                    .toBuffer();
-        }
-        
-        return `data:image/png;base64,${processedBuffer.toString('base64')}`;
-    } catch (err) {
-        console.error(`Preprocessing error (${strategy}):`, err.message);
-        return base64Image;
-    }
-}
-
-// Helper: Try multiple OCR strategies and return best result
-async function tryMultipleOCRStrategies(imageData) {
-    const strategies = ['inverted', 'highcontrast', 'normal', 'threshold'];
-    const languages = 'jpn+eng+chi_sim+chi_tra+kor+ara+hin+rus+spa+fra+deu+ita+por';
-    
-    let bestResult = null;
-    let bestConfidence = 0;
-    let bestStrategy = '';
-    
-    for (const strategy of strategies) {
-        try {
-            console.log(`\n=== Trying strategy: ${strategy.toUpperCase()} ===`);
-            const processedImage = await preprocessImage(imageData, strategy);
-            
-            const result = await Tesseract.recognize(processedImage, languages, {
-                logger: info => {
-                    if (info.status === 'recognizing text') {
-                        console.log(`[${strategy}] Progress: ${Math.round(info.progress * 100)}%`);
-                    }
-                }
+        if (cached) {
+            console.log('✓ Serving translation from cache');
+            return res.json({
+                success: true,
+                translation: cached.translated,
+                detectedLanguage: cached.sourceLang,
+                cached: true,
+                cachedAt: cached.cachedAt
             });
-            
-            const text = result.data.text.trim();
-            const confidence = result.data.confidence;
-            
-            console.log(`[${strategy}] Result: "${text}"`);
-            console.log(`[${strategy}] Confidence: ${Math.round(confidence)}%`);
-            
-            if (text && text.length > 0 && confidence > bestConfidence) {
-                bestResult = result;
-                bestConfidence = confidence;
-                bestStrategy = strategy;
-                console.log(`[${strategy}] ✓ New best result!`);
-            }
-            
-            // Early exit on high confidence
-            if (confidence > 85 && text.length > 0) {
-                console.log(`[${strategy}] ✓ High confidence! Using this result.`);
-                break;
-            }
-        } catch (err) {
-            console.error(`[${strategy}] ✗ Failed:`, err.message);
-        }
-    }
-    
-    if (bestResult) {
-        console.log(`\n✓ Best strategy: ${bestStrategy.toUpperCase()} (${Math.round(bestConfidence)}% confidence)`);
-    }
-    
-    return bestResult;
-}
-
-// Extract text from image using OCR
-async function extractTextFromImage(req, res) {
-    try {
-        const { imageData } = req.body;
-
-        if (!imageData) {
-            return res.status(400).json({ message: 'Image data is required' });
         }
 
-        console.log('\n========== OCR EXTRACTION STARTED ==========');
-        const result = await tryMultipleOCRStrategies(imageData);
-
-        if (!result || !result.data.text.trim()) {
-            return res.status(400).json({ message: 'No text found in the image' });
-        }
-
-        const extractedText = result.data.text.trim();
-        const confidence = Math.round(result.data.confidence);
-
-        console.log(`\nFinal Result: "${extractedText}"`);
-        console.log(`Final Confidence: ${confidence}%`);
-        console.log('========== OCR EXTRACTION COMPLETED ==========\n');
+        // If not in cache, add to queue
+        const job = await addTranslationJob({
+            text,
+            targetLang,
+            sourceLang,
+            userId: req.user.id,
+            socketId: req.body.socketId
+        });
 
         res.json({
             success: true,
-            text: extractedText,
-            confidence: confidence
+            jobId: job.id,
+            message: 'Translation queued',
+            cached: false
         });
-    } catch (err) {
-        console.error('OCR error:', err);
-        res.status(500).json({ message: 'Failed to extract text from image. Please try again.' });
+
+    } catch (error) {
+        console.error('Translation error:', error);
+        res.status(500).json({ 
+            success: false, 
+            error: error.message 
+        });
     }
 }
 
-// Extract text from image and translate
-async function extractAndTranslate(req, res) {
+async function extractTextFromImage(req, res) {
+    const { imageData } = req.body;
+
+    if (!imageData) {
+        return res.status(400).json({ 
+            success: false, 
+            error: 'Image data is required' 
+        });
+    }
+
     try {
-        const { imageData, targetLang } = req.body;
+        console.log('Starting OCR extraction...');
+        
+        const { data: { text } } = await Tesseract.recognize(
+            imageData,
+            'eng',
+            {
+                logger: m => console.log(`OCR Progress: ${m.status} - ${Math.round(m.progress * 100)}%`)
+            }
+        );
 
-        if (!imageData || !targetLang) {
-            return res.status(400).json({ message: 'Image data and target language are required' });
-        }
+        console.log('✓ OCR extraction completed');
 
-        console.log('\n========== OCR + TRANSLATION STARTED ==========');
-        const ocrResult = await tryMultipleOCRStrategies(imageData);
+        res.json({
+            success: true,
+            extractedText: text.trim()
+        });
 
-        if (!ocrResult || !ocrResult.data.text.trim()) {
+    } catch (error) {
+        console.error('OCR extraction error:', error);
+        res.status(500).json({ 
+            success: false, 
+            error: error.message 
+        });
+    }
+}
+
+async function extractAndTranslate(req, res) {
+    const { imageData, targetLang, sourceLang = 'auto' } = req.body;
+
+    if (!imageData || !targetLang) {
+        return res.status(400).json({ 
+            success: false, 
+            error: 'Image data and target language are required' 
+        });
+    }
+
+    try {
+        console.log('Starting OCR + Translation...');
+        
+        // Extract text from image
+        const { data: { text } } = await Tesseract.recognize(
+            imageData,
+            'eng',
+            {
+                logger: m => console.log(`OCR: ${Math.round(m.progress * 100)}%`)
+            }
+        );
+
+        const extractedText = text.trim();
+        console.log('✓ Text extracted:', extractedText.substring(0, 50) + '...');
+
+        if (!extractedText) {
             return res.status(400).json({ 
-                message: 'No text found in the image. Please try a clearer image.' 
+                success: false, 
+                error: 'No text found in image' 
             });
         }
 
-        const extractedText = ocrResult.data.text.trim();
-        const confidence = Math.round(ocrResult.data.confidence);
+        // Check cache for translation
+        const cached = await cacheService.get(extractedText, sourceLang, targetLang);
+        
+        if (cached) {
+            console.log('✓ Translation served from cache');
+            return res.json({
+                success: true,
+                extractedText,
+                translation: cached.translated,
+                detectedLanguage: cached.sourceLang,
+                cached: true
+            });
+        }
 
-        console.log(`\nExtracted: "${extractedText}"`);
-        console.log(`Confidence: ${confidence}%`);
-        console.log(`Translating to: ${targetLang}...`);
+        // Translate the extracted text
+        const result = await translate(extractedText, { 
+            from: sourceLang, 
+            to: targetLang 
+        });
 
-        const translationResult = await translate(extractedText, { to: targetLang });
-        console.log(`Translated: "${translationResult.text}"`);
-        console.log('========== OCR + TRANSLATION COMPLETED ==========\n');
+        // Store in cache
+        await cacheService.set(
+            extractedText,
+            result.from?.language?.iso || sourceLang,
+            targetLang,
+            result.text,
+            { 
+                userId: req.user.id,
+                ocrExtracted: true
+            }
+        );
 
-        const cacheKey = `translation:${Buffer.from(extractedText).toString('base64')}:${targetLang}`;
-        await redisClient.setex(cacheKey, 300, JSON.stringify({
-            translatedText: translationResult.text,
-            detectedLanguage: translationResult.from?.language?.iso || 'unknown'
-        }));
+        console.log('✓ OCR + Translation completed');
 
         res.json({
             success: true,
             extractedText,
-            translatedText: translationResult.text,
-            detectedLanguage: translationResult.from?.language?.iso || 'unknown',
-            ocrConfidence: confidence
+            translation: result.text,
+            detectedLanguage: result.from?.language?.iso || 'unknown',
+            cached: false
         });
-    } catch (err) {
-        console.error('Extract and translate error:', err);
-        res.status(500).json({ message: 'Failed to process image. Please try again.' });
+
+    } catch (error) {
+        console.error('OCR + Translation error:', error);
+        res.status(500).json({ 
+            success: false, 
+            error: error.message 
+        });
     }
 }
 
-// Get queue statistics
 async function getQueueStatistics(req, res) {
     try {
         const stats = await getQueueStats();
@@ -262,39 +180,43 @@ async function getQueueStatistics(req, res) {
             success: true,
             stats
         });
-    } catch (err) {
-        console.error('Error fetching queue stats:', err);
-        res.status(500).json({ message: 'Failed to fetch queue statistics' });
+    } catch (error) {
+        console.error('Queue stats error:', error);
+        res.status(500).json({ 
+            success: false, 
+            error: error.message 
+        });
     }
 }
 
-// Check translation cache
 async function checkTranslationCache(req, res) {
+    const { text, sourceLang = 'auto', targetLang } = req.query;
+
+    if (!text || !targetLang) {
+        return res.status(400).json({ 
+            success: false, 
+            error: 'Text and target language are required' 
+        });
+    }
+
     try {
-        const { text, targetLang } = req.query;
+        const cached = await cacheService.get(text, sourceLang, targetLang);
         
-        if (!text || !targetLang) {
-            return res.status(400).json({ message: 'Text and target language are required' });
-        }
-        
-        const cacheKey = `translation:${Buffer.from(text).toString('base64')}:${targetLang}`;
-        const cached = await redisClient.get(cacheKey);
-        
-        if (cached) {
-            return res.json({
-                cached: true,
-                data: JSON.parse(cached)
-            });
-        }
-        
-        res.json({ cached: false });
-    } catch (err) {
-        console.error('Cache check error:', err);
-        res.status(500).json({ message: 'Failed to check cache' });
+        res.json({
+            success: true,
+            cached: !!cached,
+            data: cached || null
+        });
+    } catch (error) {
+        console.error('Cache check error:', error);
+        res.status(500).json({ 
+            success: false, 
+            error: error.message 
+        });
     }
 }
 
-module.exports = { 
+module.exports = {
     handleTranslate,
     extractTextFromImage,
     extractAndTranslate,
