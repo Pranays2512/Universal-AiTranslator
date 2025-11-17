@@ -6,6 +6,8 @@ const { Server } = require('socket.io');
 const routes = require('./routes/routes.js');
 const { initializeWebSocket } = require('./websocket/socketHandler.js');
 const { redisClient, redisSubscriber } = require('./config/redis.js');
+const cacheService = require('./services/cacheService');
+const commonPhrases = require('./config/commonPhrases');
 
 const app = express();
 const server = http.createServer(app);
@@ -39,7 +41,12 @@ redisClient.on('connect', () => {
 });
 
 redisClient.on('error', (err) => {
-    console.error('Redis client error:', err);
+    if (err.code === 'ECONNREFUSED') {
+        console.warn('⚠️  Redis not available, running in degraded mode');
+        cacheService.enabled = false;
+    } else {
+        console.error('Redis client error:', err);
+    }
 });
 
 redisSubscriber.on('connect', () => {
@@ -47,7 +54,9 @@ redisSubscriber.on('connect', () => {
 });
 
 redisSubscriber.on('error', (err) => {
-    console.error('Redis subscriber error:', err);
+    if (err.code !== 'ECONNREFUSED') {
+        console.error('Redis subscriber error:', err);
+    }
 });
 
 // Graceful shutdown
@@ -61,13 +70,22 @@ process.on('SIGTERM', async () => {
     });
 });
 
-server.listen(PORT, () => {
+server.listen(PORT, async () => {
     console.log(`
 ╔═══════════════════════════════════════╗
 ║   Server running on port ${PORT}        ║
 ║   http://localhost:${PORT}              ║
 ║   WebSocket: Connected                 ║
-║   Redis: Connected                     ║
+║   Redis: ${cacheService.enabled ? 'Connected' : 'Disconnected'}     ║
 ╚═══════════════════════════════════════╝
     `);
+
+    // Preload common phrases into cache
+    if (cacheService.enabled) {
+        try {
+            await cacheService.preloadCommon(commonPhrases);
+        } catch (error) {
+            console.error('Failed to preload common phrases:', error);
+        }
+    }
 });
