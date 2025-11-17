@@ -10,6 +10,7 @@ const {
     checkTranslationCache 
 } = require('../controller/translationController.js');
 const { signUp, signIn } = require('../controller/controller.js');
+const { getFailedJobs, retryFailedJob, getQueueStats } = require('../queue/translationQueue');
 
 // Increase payload limit for OCR endpoints (for base64 images)
 const jsonParserLarge = express.json({ limit: '10mb' });
@@ -30,6 +31,37 @@ router.get('/health', (req, res) => {
         websocket: 'active',
         redis: 'connected'
     });
+});
+
+// Get queue statistics
+router.get('/api/admin/queue/stats', async (req, res) => {
+    try {
+        const stats = await getQueueStats();
+        res.json(stats);
+    } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
+});
+
+// Get failed jobs from DLQ
+router.get('/api/admin/queue/failed', async (req, res) => {
+    try {
+        const limit = parseInt(req.query.limit) || 50;
+        const failedJobs = await getFailedJobs(limit);
+        res.json({ jobs: failedJobs });
+    } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
+});
+
+// Retry a failed job
+router.post('/api/admin/queue/retry/:jobId', async (req, res) => {
+    try {
+        const job = await retryFailedJob(req.params.jobId);
+        res.json({ success: true, newJobId: job.id });
+    } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
 });
 
 module.exports = router;
