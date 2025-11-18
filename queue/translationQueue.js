@@ -18,7 +18,7 @@ const translationQueue = new Queue('translation', {
     }
 });
 
-// Dead Letter Queue for permanently failed jobs
+// Dead Letter Queue for permanently failed jobs which stores fialed commits
 const deadLetterQueue = new Queue('translation:failed', {
     redis: redisConfig,
     defaultJobOptions: {
