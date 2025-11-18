@@ -1,3 +1,4 @@
+//added comman pharses for easy api use case
 module.exports = [
     // English to Spanish
     { text: 'Hello', from: 'en', to: 'es', translation: 'Hola' },
