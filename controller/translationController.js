@@ -14,7 +14,7 @@ async function handleTranslate(req, res) {
     }
 
     try {
-        // Check cache first
+        // Check cache first if avaiavble
         const cached = await cacheService.get(text, sourceLang, targetLang);
         
         if (cached) {
