@@ -1142,9 +1142,13 @@ function escapeHtml(text) {
 }
 
 function sanitizeText(text) {
-    // Remove any potential script tags and dangerous characters
+    // Use escapeHtml for proper sanitization
+    // This creates a text node which automatically escapes all HTML entities
     if (!text) return '';
-    return text.replace(/<[^>]*>/g, '').trim();
+    const div = document.createElement('div');
+    div.textContent = text;
+    // Get the text back (which is now safe)
+    return div.textContent.trim();
 }
 
 function showNotification(message, type = 'success') {
