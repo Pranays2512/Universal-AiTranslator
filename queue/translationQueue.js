@@ -3,8 +3,7 @@ const translate = require('google-translate-api-x');
 const { redisConfig } = require('../config/redis.js');
 const cacheService = require('../services/cacheService');
 const { publish } = require('../services/pubsubService');
-const { PrismaClient } = require('@prisma/client');
-const prisma = new PrismaClient();
+const prisma = require('../config/database');
 
 // Create translation queue
 const translationQueue = new Queue('translation', {

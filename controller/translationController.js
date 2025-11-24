@@ -2,8 +2,7 @@ const translate = require('google-translate-api-x');
 const { translationQueue, addTranslationJob, getQueueStats } = require('../queue/translationQueue.js');
 const Tesseract = require('tesseract.js');
 const cacheService = require('../services/cacheService');
-const { PrismaClient } = require('@prisma/client');
-const prisma = new PrismaClient();
+const prisma = require('../config/database');
 
 async function handleTranslate(req, res) {
     const { text, targetLang, sourceLang = 'auto' } = req.body;

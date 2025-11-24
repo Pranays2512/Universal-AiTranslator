@@ -848,9 +848,9 @@ function displayHistory(items, pagination) {
     // Add event delegation for buttons
     listEl.querySelectorAll('.history-use-btn').forEach(btn => {
         btn.addEventListener('click', function() {
-            const text = sanitizeText(this.getAttribute('data-text'));
-            const sourceLang = sanitizeText(this.getAttribute('data-source-lang'));
-            const targetLang = sanitizeText(this.getAttribute('data-target-lang'));
+            const text = sanitizeAttributeValue(this.getAttribute('data-text'));
+            const sourceLang = sanitizeAttributeValue(this.getAttribute('data-source-lang'));
+            const targetLang = sanitizeAttributeValue(this.getAttribute('data-target-lang'));
             if (text && sourceLang && targetLang) {
                 useHistoryItem(text, sourceLang, targetLang);
             }
@@ -960,9 +960,9 @@ function displaySaved(items, pagination) {
     // Add event delegation for buttons
     listEl.querySelectorAll('.saved-use-btn').forEach(btn => {
         btn.addEventListener('click', function() {
-            const text = sanitizeText(this.getAttribute('data-text'));
-            const sourceLang = sanitizeText(this.getAttribute('data-source-lang'));
-            const targetLang = sanitizeText(this.getAttribute('data-target-lang'));
+            const text = sanitizeAttributeValue(this.getAttribute('data-text'));
+            const sourceLang = sanitizeAttributeValue(this.getAttribute('data-source-lang'));
+            const targetLang = sanitizeAttributeValue(this.getAttribute('data-target-lang'));
             if (text && sourceLang && targetLang) {
                 useSavedItem(text, sourceLang, targetLang);
             }
@@ -1141,13 +1141,12 @@ function escapeHtml(text) {
     return div.innerHTML;
 }
 
-function sanitizeText(text) {
-    // Use escapeHtml for proper sanitization
-    // This creates a text node which automatically escapes all HTML entities
-    if (!text) return '';
+function sanitizeAttributeValue(value) {
+    // Sanitize values retrieved from data attributes
+    // Ensures no script injection even if attributes were tampered with
+    if (!value) return '';
     const div = document.createElement('div');
-    div.textContent = text;
-    // Get the text back (which is now safe)
+    div.textContent = value;
     return div.textContent.trim();
 }
 
