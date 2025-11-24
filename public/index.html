@@ -164,6 +164,50 @@
             <button class="btn btn-secondary" id="clearBtn" onclick="clearText()">
                 Clear All
             </button>
+            <button class="btn btn-info" id="historyBtn" onclick="showHistory()">
+                📜 History
+            </button>
+            <button class="btn btn-info" id="savedBtn" onclick="showSaved()">
+                ⭐ Saved
+            </button>
+        </div>
+
+        <!-- Save button for current translation -->
+        <button class="save-translation-btn" id="saveTranslationBtn" onclick="toggleSaveTranslation()" style="display: none;">
+            <svg id="saveIcon" xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon>
+            </svg>
+        </button>
+    </div>
+
+    <!-- History Modal -->
+    <div class="history-modal" id="historyModal" style="display: none;">
+        <div class="history-content">
+            <div class="history-header">
+                <h2>Translation History</h2>
+                <div>
+                    <button class="btn-clear-history" onclick="clearHistory()">Clear All</button>
+                    <button class="close-btn" onclick="closeHistory()">×</button>
+                </div>
+            </div>
+            <div class="history-list" id="historyList">
+                <div class="loading">Loading history...</div>
+            </div>
+            <div class="pagination" id="historyPagination"></div>
+        </div>
+    </div>
+
+    <!-- Saved Translations Modal -->
+    <div class="history-modal" id="savedModal" style="display: none;">
+        <div class="history-content">
+            <div class="history-header">
+                <h2>Saved Translations</h2>
+                <button class="close-btn" onclick="closeSaved()">×</button>
+            </div>
+            <div class="history-list" id="savedList">
+                <div class="loading">Loading saved translations...</div>
+            </div>
+            <div class="pagination" id="savedPagination"></div>
         </div>
     </div>
 

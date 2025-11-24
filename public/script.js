@@ -306,6 +306,12 @@ function initializeWebSocket(token) {
             
             output.style.transform = 'scale(1.01)';
             setTimeout(() => { output.style.transform = 'scale(1)'; }, 300);
+            
+            // Update current translation for save functionality
+            const inputText = document.getElementById('inputText').value;
+            const sourceLang = document.getElementById('inputLang').value;
+            const targetLang = document.getElementById('outputLang').value;
+            updateCurrentTranslation(inputText, data.translatedText, sourceLang, targetLang);
         });
         
         // Handle translation error
@@ -492,7 +498,11 @@ async function translateText() {
         const data = await response.json();
 
         if (response.ok) {
-            output.value = data.translatedText; 
+            output.value = data.translatedText;
+            
+            // Update current translation for save functionality
+            const sourceLang = document.getElementById('inputLang').value;
+            updateCurrentTranslation(input, data.translatedText, sourceLang, targetLanguage);
         } else {
             output.value = '';
             if (response.status === 401) {
@@ -522,6 +532,13 @@ function clearText() {
     document.getElementById('outputText').value = '';
     wordCount.textContent = '0 / 5000';
     wordCount.style.color = 'rgba(255, 255, 255, 0.4)';
+    
+    // Hide save button when clearing
+    currentTranslationData = null;
+    const saveBtn = document.getElementById('saveTranslationBtn');
+    if (saveBtn) {
+        saveBtn.style.display = 'none';
+    }
 }
 
 function copyTranslation() {
@@ -630,3 +647,489 @@ function toggleSpeechRecognition() {
         }
     }
 }
+// ==================== Translation History & Saved Translations ====================
+
+let currentHistoryPage = 1;
+let currentSavedPage = 1;
+let currentTranslationData = null;
+
+// Update translation data when translation completes
+function updateCurrentTranslation(sourceText, translatedText, sourceLang, targetLang) {
+    currentTranslationData = {
+        sourceText,
+        translatedText,
+        sourceLang,
+        targetLang
+    };
+    
+    // Show save button if there's a translation
+    const saveBtn = document.getElementById('saveTranslationBtn');
+    if (translatedText && translatedText.trim()) {
+        saveBtn.style.display = 'flex';
+        checkIfTranslationSaved();
+    } else {
+        saveBtn.style.display = 'none';
+    }
+}
+
+// Check if current translation is already saved
+async function checkIfTranslationSaved() {
+    if (!currentTranslationData || !isAuthenticated) return;
+    
+    const token = localStorage.getItem('token');
+    const { sourceText, sourceLang, targetLang } = currentTranslationData;
+    
+    try {
+        const response = await fetch(
+            `/api/saved/check?sourceText=${encodeURIComponent(sourceText)}&sourceLang=${sourceLang}&targetLang=${targetLang}`,
+            {
+                headers: {
+                    'Authorization': `Bearer ${token}`
+                }
+            }
+        );
+        
+        const data = await response.json();
+        const saveBtn = document.getElementById('saveTranslationBtn');
+        
+        if (data.success && data.isSaved) {
+            saveBtn.classList.add('saved');
+        } else {
+            saveBtn.classList.remove('saved');
+        }
+    } catch (error) {
+        console.error('Error checking saved status:', error);
+    }
+}
+
+// Toggle save/unsave translation
+async function toggleSaveTranslation() {
+    if (!currentTranslationData || !isAuthenticated) return;
+    
+    const token = localStorage.getItem('token');
+    const saveBtn = document.getElementById('saveTranslationBtn');
+    const isSaved = saveBtn.classList.contains('saved');
+    
+    try {
+        if (isSaved) {
+            // Find and remove from saved
+            const checkResponse = await fetch(
+                `/api/saved/check?sourceText=${encodeURIComponent(currentTranslationData.sourceText)}&sourceLang=${currentTranslationData.sourceLang}&targetLang=${currentTranslationData.targetLang}`,
+                {
+                    headers: {
+                        'Authorization': `Bearer ${token}`
+                    }
+                }
+            );
+            const checkData = await checkResponse.json();
+            
+            if (checkData.success && checkData.data) {
+                const response = await fetch(`/api/saved/${checkData.data.id}`, {
+                    method: 'DELETE',
+                    headers: {
+                        'Authorization': `Bearer ${token}`
+                    }
+                });
+                
+                if (response.ok) {
+                    saveBtn.classList.remove('saved');
+                    showNotification('Removed from saved translations');
+                }
+            }
+        } else {
+            // Save translation
+            const response = await fetch('/api/saved', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${token}`
+                },
+                body: JSON.stringify(currentTranslationData)
+            });
+            
+            if (response.ok) {
+                saveBtn.classList.add('saved');
+                showNotification('Translation saved!');
+            }
+        }
+    } catch (error) {
+        console.error('Error toggling save:', error);
+        showNotification('Failed to save translation', 'error');
+    }
+}
+
+// Show history modal
+async function showHistory() {
+    if (!isAuthenticated) {
+        showWindow();
+        return;
+    }
+    
+    const modal = document.getElementById('historyModal');
+    modal.style.display = 'flex';
+    currentHistoryPage = 1;
+    await loadHistory();
+}
+
+// Close history modal
+function closeHistory() {
+    document.getElementById('historyModal').style.display = 'none';
+}
+
+// Load translation history
+async function loadHistory(page = 1) {
+    const token = localStorage.getItem('token');
+    const listEl = document.getElementById('historyList');
+    
+    listEl.innerHTML = '<div class="loading">Loading history...</div>';
+    
+    try {
+        const response = await fetch(`/api/history?page=${page}&limit=10`, {
+            headers: {
+                'Authorization': `Bearer ${token}`
+            }
+        });
+        
+        const result = await response.json();
+        
+        if (result.success) {
+            currentHistoryPage = page;
+            displayHistory(result.data, result.pagination);
+        } else {
+            listEl.innerHTML = '<div class="empty-state">Failed to load history</div>';
+        }
+    } catch (error) {
+        console.error('Error loading history:', error);
+        listEl.innerHTML = '<div class="empty-state">Failed to load history</div>';
+    }
+}
+
+// Display history items
+function displayHistory(items, pagination) {
+    const listEl = document.getElementById('historyList');
+    
+    if (!items || items.length === 0) {
+        listEl.innerHTML = `
+            <div class="empty-state">
+                <h3>No translation history yet</h3>
+                <p>Your translation history will appear here</p>
+            </div>
+        `;
+        document.getElementById('historyPagination').innerHTML = '';
+        return;
+    }
+    
+    listEl.innerHTML = items.map(item => `
+        <div class="history-item">
+            <div class="history-item-header">
+                <div class="history-langs">${item.sourceLang.toUpperCase()} → ${item.targetLang.toUpperCase()}</div>
+                <div class="history-date">${formatDate(item.createdAt)}</div>
+            </div>
+            <div class="history-text-row">
+                <div class="history-text-col">
+                    <div class="history-label">Original</div>
+                    <div class="history-text">${escapeHtml(item.sourceText)}</div>
+                </div>
+                <div class="history-text-col">
+                    <div class="history-label">Translation</div>
+                    <div class="history-text">${escapeHtml(item.translatedText)}</div>
+                </div>
+            </div>
+            <div class="history-actions">
+                <button class="history-btn" onclick="useHistoryItem('${escapeHtml(item.sourceText)}', '${item.sourceLang}', '${item.targetLang}')">Use</button>
+                <button class="history-btn history-btn-delete" onclick="deleteHistoryItem(${item.id})">Delete</button>
+            </div>
+        </div>
+    `).join('');
+    
+    displayPagination('historyPagination', pagination, loadHistory);
+}
+
+// Show saved translations modal
+async function showSaved() {
+    if (!isAuthenticated) {
+        showWindow();
+        return;
+    }
+    
+    const modal = document.getElementById('savedModal');
+    modal.style.display = 'flex';
+    currentSavedPage = 1;
+    await loadSaved();
+}
+
+// Close saved modal
+function closeSaved() {
+    document.getElementById('savedModal').style.display = 'none';
+}
+
+// Load saved translations
+async function loadSaved(page = 1) {
+    const token = localStorage.getItem('token');
+    const listEl = document.getElementById('savedList');
+    
+    listEl.innerHTML = '<div class="loading">Loading saved translations...</div>';
+    
+    try {
+        const response = await fetch(`/api/saved?page=${page}&limit=10`, {
+            headers: {
+                'Authorization': `Bearer ${token}`
+            }
+        });
+        
+        const result = await response.json();
+        
+        if (result.success) {
+            currentSavedPage = page;
+            displaySaved(result.data, result.pagination);
+        } else {
+            listEl.innerHTML = '<div class="empty-state">Failed to load saved translations</div>';
+        }
+    } catch (error) {
+        console.error('Error loading saved:', error);
+        listEl.innerHTML = '<div class="empty-state">Failed to load saved translations</div>';
+    }
+}
+
+// Display saved items
+function displaySaved(items, pagination) {
+    const listEl = document.getElementById('savedList');
+    
+    if (!items || items.length === 0) {
+        listEl.innerHTML = `
+            <div class="empty-state">
+                <h3>No saved translations yet</h3>
+                <p>Save your favorite translations to access them quickly</p>
+            </div>
+        `;
+        document.getElementById('savedPagination').innerHTML = '';
+        return;
+    }
+    
+    listEl.innerHTML = items.map(item => `
+        <div class="history-item">
+            <div class="history-item-header">
+                <div class="history-langs">⭐ ${item.sourceLang.toUpperCase()} → ${item.targetLang.toUpperCase()}</div>
+                <div class="history-date">${formatDate(item.updatedAt)}</div>
+            </div>
+            <div class="history-text-row">
+                <div class="history-text-col">
+                    <div class="history-label">Original</div>
+                    <div class="history-text">${escapeHtml(item.sourceText)}</div>
+                </div>
+                <div class="history-text-col">
+                    <div class="history-label">Translation</div>
+                    <div class="history-text">${escapeHtml(item.translatedText)}</div>
+                </div>
+            </div>
+            ${item.note ? `<div class="saved-note">Note: ${escapeHtml(item.note)}</div>` : ''}
+            <div class="history-actions">
+                <button class="history-btn" onclick="useSavedItem('${escapeHtml(item.sourceText)}', '${item.sourceLang}', '${item.targetLang}')">Use</button>
+                <button class="history-btn history-btn-delete" onclick="removeSavedItem(${item.id})">Remove</button>
+            </div>
+        </div>
+    `).join('');
+    
+    displayPagination('savedPagination', pagination, loadSaved);
+}
+
+// Display pagination controls
+function displayPagination(elementId, pagination, loadFunction) {
+    const paginationEl = document.getElementById(elementId);
+    
+    if (pagination.totalPages <= 1) {
+        paginationEl.innerHTML = '';
+        return;
+    }
+    
+    paginationEl.innerHTML = `
+        <button ${pagination.page <= 1 ? 'disabled' : ''} onclick="${loadFunction.name}(${pagination.page - 1})">
+            Previous
+        </button>
+        <span>Page ${pagination.page} of ${pagination.totalPages}</span>
+        <button ${pagination.page >= pagination.totalPages ? 'disabled' : ''} onclick="${loadFunction.name}(${pagination.page + 1})">
+            Next
+        </button>
+    `;
+}
+
+// Delete history item
+async function deleteHistoryItem(id) {
+    if (!confirm('Delete this translation from history?')) return;
+    
+    const token = localStorage.getItem('token');
+    
+    try {
+        const response = await fetch(`/api/history/${id}`, {
+            method: 'DELETE',
+            headers: {
+                'Authorization': `Bearer ${token}`
+            }
+        });
+        
+        if (response.ok) {
+            showNotification('Translation deleted from history');
+            await loadHistory(currentHistoryPage);
+        } else {
+            showNotification('Failed to delete translation', 'error');
+        }
+    } catch (error) {
+        console.error('Error deleting history:', error);
+        showNotification('Failed to delete translation', 'error');
+    }
+}
+
+// Clear all history
+async function clearHistory() {
+    if (!confirm('Are you sure you want to clear all translation history? This cannot be undone.')) return;
+    
+    const token = localStorage.getItem('token');
+    
+    try {
+        const response = await fetch('/api/history', {
+            method: 'DELETE',
+            headers: {
+                'Authorization': `Bearer ${token}`
+            }
+        });
+        
+        if (response.ok) {
+            showNotification('Translation history cleared');
+            await loadHistory(1);
+        } else {
+            showNotification('Failed to clear history', 'error');
+        }
+    } catch (error) {
+        console.error('Error clearing history:', error);
+        showNotification('Failed to clear history', 'error');
+    }
+}
+
+// Remove saved item
+async function removeSavedItem(id) {
+    if (!confirm('Remove this translation from saved?')) return;
+    
+    const token = localStorage.getItem('token');
+    
+    try {
+        const response = await fetch(`/api/saved/${id}`, {
+            method: 'DELETE',
+            headers: {
+                'Authorization': `Bearer ${token}`
+            }
+        });
+        
+        if (response.ok) {
+            showNotification('Translation removed from saved');
+            await loadSaved(currentSavedPage);
+            
+            // Update save button if this was the current translation
+            if (currentTranslationData) {
+                checkIfTranslationSaved();
+            }
+        } else {
+            showNotification('Failed to remove translation', 'error');
+        }
+    } catch (error) {
+        console.error('Error removing saved:', error);
+        showNotification('Failed to remove translation', 'error');
+    }
+}
+
+// Use history item
+function useHistoryItem(text, sourceLang, targetLang) {
+    document.getElementById('inputText').value = text;
+    document.getElementById('inputLang').value = sourceLang;
+    document.getElementById('outputLang').value = targetLang;
+    closeHistory();
+    translateText();
+}
+
+// Use saved item
+function useSavedItem(text, sourceLang, targetLang) {
+    document.getElementById('inputText').value = text;
+    document.getElementById('inputLang').value = sourceLang;
+    document.getElementById('outputLang').value = targetLang;
+    closeSaved();
+    translateText();
+}
+
+// Utility functions
+function formatDate(dateString) {
+    const date = new Date(dateString);
+    const now = new Date();
+    const diffMs = now - date;
+    const diffMins = Math.floor(diffMs / 60000);
+    const diffHours = Math.floor(diffMs / 3600000);
+    const diffDays = Math.floor(diffMs / 86400000);
+    
+    if (diffMins < 1) return 'Just now';
+    if (diffMins < 60) return `${diffMins} min${diffMins > 1 ? 's' : ''} ago`;
+    if (diffHours < 24) return `${diffHours} hour${diffHours > 1 ? 's' : ''} ago`;
+    if (diffDays < 7) return `${diffDays} day${diffDays > 1 ? 's' : ''} ago`;
+    
+    return date.toLocaleDateString('en-US', { 
+        month: 'short', 
+        day: 'numeric',
+        year: date.getFullYear() !== now.getFullYear() ? 'numeric' : undefined
+    });
+}
+
+function escapeHtml(text) {
+    const div = document.createElement('div');
+    div.textContent = text;
+    return div.innerHTML;
+}
+
+function showNotification(message, type = 'success') {
+    // Simple notification - could be enhanced with a toast library
+    const notification = document.createElement('div');
+    notification.textContent = message;
+    notification.style.cssText = `
+        position: fixed;
+        top: 20px;
+        right: 20px;
+        padding: 16px 24px;
+        background: ${type === 'error' ? 'rgba(255, 59, 48, 0.9)' : 'rgba(52, 199, 89, 0.9)'};
+        color: white;
+        border-radius: 12px;
+        z-index: 10000;
+        font-size: 14px;
+        font-weight: 500;
+        box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+        animation: slideInRight 0.3s ease;
+    `;
+    
+    document.body.appendChild(notification);
+    
+    setTimeout(() => {
+        notification.style.animation = 'slideOutRight 0.3s ease';
+        setTimeout(() => notification.remove(), 300);
+    }, 3000);
+}
+
+// Add CSS animations for notifications
+const style = document.createElement('style');
+style.textContent = `
+    @keyframes slideInRight {
+        from {
+            transform: translateX(400px);
+            opacity: 0;
+        }
+        to {
+            transform: translateX(0);
+            opacity: 1;
+        }
+    }
+    @keyframes slideOutRight {
+        from {
+            transform: translateX(0);
+            opacity: 1;
+        }
+        to {
+            transform: translateX(400px);
+            opacity: 0;
+        }
+    }
+`;
+document.head.appendChild(style);
