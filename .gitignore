@@ -67,3 +67,4 @@ dump.rdb
 # Bull queue data
 .bull/
 *.traineddata
+/generated/prisma
