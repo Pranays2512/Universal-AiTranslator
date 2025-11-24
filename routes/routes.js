@@ -12,6 +12,15 @@ const {
 const { signUp, signIn } = require('../controller/controller.js');
 const { getFailedJobs, retryFailedJob, getQueueStats } = require('../queue/translationQueue');
 const cacheRoutes = require('./cacheRoutes');
+const {
+    getTranslationHistory,
+    deleteTranslationHistory,
+    clearTranslationHistory,
+    getSavedTranslations,
+    saveTranslation,
+    removeSavedTranslation,
+    checkIfSaved
+} = require('../controller/historyController');
 
 // Increase payload limit for OCR endpoints (for base64 images)
 const jsonParserLarge = express.json({ limit: '10mb' });
@@ -29,6 +38,17 @@ router.get('/translation/cache', checkUser, checkTranslationCache);
 
 // Cache routes
 router.use('/cache', cacheRoutes);
+
+// Translation history routes
+router.get('/api/history', checkUser, getTranslationHistory);
+router.delete('/api/history/:id', checkUser, deleteTranslationHistory);
+router.delete('/api/history', checkUser, clearTranslationHistory);
+
+// Saved translations routes
+router.get('/api/saved', checkUser, getSavedTranslations);
+router.post('/api/saved', checkUser, saveTranslation);
+router.delete('/api/saved/:id', checkUser, removeSavedTranslation);
+router.get('/api/saved/check', checkUser, checkIfSaved);
 
 // Health check
 router.get('/health', async (req, res) => {

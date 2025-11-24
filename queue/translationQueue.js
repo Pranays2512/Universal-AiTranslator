@@ -3,6 +3,8 @@ const translate = require('google-translate-api-x');
 const { redisConfig } = require('../config/redis.js');
 const cacheService = require('../services/cacheService');
 const { publish } = require('../services/pubsubService');
+const { PrismaClient } = require('@prisma/client');
+const prisma = new PrismaClient();
 
 // Create translation queue
 const translationQueue = new Queue('translation', {
@@ -68,6 +70,22 @@ translationQueue.process(async (job) => {
                 jobId: job.id
             }
         );
+
+        // Save to database history
+        try {
+            await prisma.translationHistory.create({
+                data: {
+                    userId,
+                    sourceText: text,
+                    translatedText: result.text,
+                    sourceLang: detectedLang,
+                    targetLang
+                }
+            });
+        } catch (dbError) {
+            console.error(`Failed to save translation to database:`, dbError);
+            // Don't fail the job if DB save fails
+        }
 
         console.log(`✓ Job ${job.id} completed and cached`);
         

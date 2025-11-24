@@ -41,7 +41,7 @@ async function checkUser(req, res, next) {
         const user = await prisma.user.findUnique({ where: { id: decoded.userId } });
         if (!user) return res.status(401).json({ message: 'User not found' });
 
-        req.currentUser = { id: user.id, name: user.name, email: user.email };
+        req.user = { id: user.id, name: user.name, email: user.email };
         next();
     } catch (err) {
         console.error(err);

@@ -2,6 +2,8 @@ const translate = require('google-translate-api-x');
 const { translationQueue, addTranslationJob, getQueueStats } = require('../queue/translationQueue.js');
 const Tesseract = require('tesseract.js');
 const cacheService = require('../services/cacheService');
+const { PrismaClient } = require('@prisma/client');
+const prisma = new PrismaClient();
 
 async function handleTranslate(req, res) {
     const { text, targetLang, sourceLang = 'auto' } = req.body;
@@ -153,6 +155,22 @@ async function extractAndTranslate(req, res) {
                 ocrExtracted: true
             }
         );
+
+        // Save to database history
+        try {
+            await prisma.translationHistory.create({
+                data: {
+                    userId: req.user.id,
+                    sourceText: extractedText,
+                    translatedText: result.text,
+                    sourceLang: result.from?.language?.iso || sourceLang,
+                    targetLang
+                }
+            });
+        } catch (dbError) {
+            console.error('Failed to save OCR translation to database:', dbError);
+            // Don't fail the request if DB save fails
+        }
 
         console.log('✓ OCR + Translation completed');
 
