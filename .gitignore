@@ -10,7 +10,8 @@ pnpm-debug.log
 .env.local
 
 # Prisma
-prisma/
+prisma/*.db
+prisma/*.db-journal
 generated/
 *.db
 
