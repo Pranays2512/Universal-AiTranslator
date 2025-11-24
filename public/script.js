@@ -681,7 +681,7 @@ async function checkIfTranslationSaved() {
     
     try {
         const response = await fetch(
-            `/api/saved/check?sourceText=${encodeURIComponent(sourceText)}&sourceLang=${sourceLang}&targetLang=${targetLang}`,
+            `/api/saved/check?sourceText=${encodeURIComponent(sourceText)}&sourceLang=${encodeURIComponent(sourceLang)}&targetLang=${encodeURIComponent(targetLang)}`,
             {
                 headers: {
                     'Authorization': `Bearer ${token}`
@@ -714,7 +714,7 @@ async function toggleSaveTranslation() {
         if (isSaved) {
             // Find and remove from saved
             const checkResponse = await fetch(
-                `/api/saved/check?sourceText=${encodeURIComponent(currentTranslationData.sourceText)}&sourceLang=${currentTranslationData.sourceLang}&targetLang=${currentTranslationData.targetLang}`,
+                `/api/saved/check?sourceText=${encodeURIComponent(currentTranslationData.sourceText)}&sourceLang=${encodeURIComponent(currentTranslationData.sourceLang)}&targetLang=${encodeURIComponent(currentTranslationData.targetLang)}`,
                 {
                     headers: {
                         'Authorization': `Bearer ${token}`
@@ -848,17 +848,21 @@ function displayHistory(items, pagination) {
     // Add event delegation for buttons
     listEl.querySelectorAll('.history-use-btn').forEach(btn => {
         btn.addEventListener('click', function() {
-            const text = this.getAttribute('data-text');
-            const sourceLang = this.getAttribute('data-source-lang');
-            const targetLang = this.getAttribute('data-target-lang');
-            useHistoryItem(text, sourceLang, targetLang);
+            const text = sanitizeText(this.getAttribute('data-text'));
+            const sourceLang = sanitizeText(this.getAttribute('data-source-lang'));
+            const targetLang = sanitizeText(this.getAttribute('data-target-lang'));
+            if (text && sourceLang && targetLang) {
+                useHistoryItem(text, sourceLang, targetLang);
+            }
         });
     });
     
     listEl.querySelectorAll('.history-delete-btn').forEach(btn => {
         btn.addEventListener('click', function() {
-            const id = parseInt(this.getAttribute('data-id'));
-            deleteHistoryItem(id);
+            const id = parseInt(this.getAttribute('data-id'), 10);
+            if (!isNaN(id) && id > 0) {
+                deleteHistoryItem(id);
+            }
         });
     });
     
@@ -956,17 +960,21 @@ function displaySaved(items, pagination) {
     // Add event delegation for buttons
     listEl.querySelectorAll('.saved-use-btn').forEach(btn => {
         btn.addEventListener('click', function() {
-            const text = this.getAttribute('data-text');
-            const sourceLang = this.getAttribute('data-source-lang');
-            const targetLang = this.getAttribute('data-target-lang');
-            useSavedItem(text, sourceLang, targetLang);
+            const text = sanitizeText(this.getAttribute('data-text'));
+            const sourceLang = sanitizeText(this.getAttribute('data-source-lang'));
+            const targetLang = sanitizeText(this.getAttribute('data-target-lang'));
+            if (text && sourceLang && targetLang) {
+                useSavedItem(text, sourceLang, targetLang);
+            }
         });
     });
     
     listEl.querySelectorAll('.saved-remove-btn').forEach(btn => {
         btn.addEventListener('click', function() {
-            const id = parseInt(this.getAttribute('data-id'));
-            removeSavedItem(id);
+            const id = parseInt(this.getAttribute('data-id'), 10);
+            if (!isNaN(id) && id > 0) {
+                removeSavedItem(id);
+            }
         });
     });
     
@@ -1131,6 +1139,12 @@ function escapeHtml(text) {
     const div = document.createElement('div');
     div.textContent = text;
     return div.innerHTML;
+}
+
+function sanitizeText(text) {
+    // Remove any potential script tags and dangerous characters
+    if (!text) return '';
+    return text.replace(/<[^>]*>/g, '').trim();
 }
 
 function showNotification(message, type = 'success') {

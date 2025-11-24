@@ -8,8 +8,13 @@ const prisma = new PrismaClient();
 async function getTranslationHistory(req, res) {
     try {
         const userId = req.user.id;
-        const page = Math.max(1, parseInt(req.query.page) || 1);
-        const limit = Math.min(100, Math.max(1, parseInt(req.query.limit) || 20));
+        
+        // Robust pagination validation
+        const pageParam = req.query.page;
+        const limitParam = req.query.limit;
+        
+        const page = (pageParam && !isNaN(pageParam)) ? Math.max(1, parseInt(pageParam, 10)) : 1;
+        const limit = (limitParam && !isNaN(limitParam)) ? Math.min(100, Math.max(1, parseInt(limitParam, 10))) : 20;
         const skip = (page - 1) * limit;
 
         // Get total count for pagination
@@ -50,7 +55,15 @@ async function getTranslationHistory(req, res) {
 async function deleteTranslationHistory(req, res) {
     try {
         const userId = req.user.id;
-        const historyId = parseInt(req.params.id);
+        const historyId = parseInt(req.params.id, 10);
+        
+        // Validate ID parameter
+        if (isNaN(historyId) || historyId <= 0) {
+            return res.status(400).json({
+                success: false,
+                error: 'Invalid history ID'
+            });
+        }
 
         // Verify ownership before deleting
         const history = await prisma.translationHistory.findFirst({
@@ -114,8 +127,13 @@ async function clearTranslationHistory(req, res) {
 async function getSavedTranslations(req, res) {
     try {
         const userId = req.user.id;
-        const page = Math.max(1, parseInt(req.query.page) || 1);
-        const limit = Math.min(100, Math.max(1, parseInt(req.query.limit) || 20));
+        
+        // Robust pagination validation
+        const pageParam = req.query.page;
+        const limitParam = req.query.limit;
+        
+        const page = (pageParam && !isNaN(pageParam)) ? Math.max(1, parseInt(pageParam, 10)) : 1;
+        const limit = (limitParam && !isNaN(limitParam)) ? Math.min(100, Math.max(1, parseInt(limitParam, 10))) : 20;
         const skip = (page - 1) * limit;
 
         const total = await prisma.savedTranslation.count({
@@ -208,7 +226,15 @@ async function saveTranslation(req, res) {
 async function removeSavedTranslation(req, res) {
     try {
         const userId = req.user.id;
-        const savedId = parseInt(req.params.id);
+        const savedId = parseInt(req.params.id, 10);
+        
+        // Validate ID parameter
+        if (isNaN(savedId) || savedId <= 0) {
+            return res.status(400).json({
+                success: false,
+                error: 'Invalid saved translation ID'
+            });
+        }
 
         // Verify ownership before deleting
         const saved = await prisma.savedTranslation.findFirst({
