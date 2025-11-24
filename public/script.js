@@ -820,7 +820,7 @@ function displayHistory(items, pagination) {
     }
     
     listEl.innerHTML = items.map(item => `
-        <div class="history-item">
+        <div class="history-item" data-item-id="${item.id}">
             <div class="history-item-header">
                 <div class="history-langs">${item.sourceLang.toUpperCase()} → ${item.targetLang.toUpperCase()}</div>
                 <div class="history-date">${formatDate(item.createdAt)}</div>
@@ -836,11 +836,31 @@ function displayHistory(items, pagination) {
                 </div>
             </div>
             <div class="history-actions">
-                <button class="history-btn" onclick="useHistoryItem('${escapeHtml(item.sourceText)}', '${item.sourceLang}', '${item.targetLang}')">Use</button>
-                <button class="history-btn history-btn-delete" onclick="deleteHistoryItem(${item.id})">Delete</button>
+                <button class="history-btn history-use-btn" 
+                    data-text="${escapeHtml(item.sourceText)}" 
+                    data-source-lang="${item.sourceLang}" 
+                    data-target-lang="${item.targetLang}">Use</button>
+                <button class="history-btn history-btn-delete history-delete-btn" data-id="${item.id}">Delete</button>
             </div>
         </div>
     `).join('');
+    
+    // Add event delegation for buttons
+    listEl.querySelectorAll('.history-use-btn').forEach(btn => {
+        btn.addEventListener('click', function() {
+            const text = this.getAttribute('data-text');
+            const sourceLang = this.getAttribute('data-source-lang');
+            const targetLang = this.getAttribute('data-target-lang');
+            useHistoryItem(text, sourceLang, targetLang);
+        });
+    });
+    
+    listEl.querySelectorAll('.history-delete-btn').forEach(btn => {
+        btn.addEventListener('click', function() {
+            const id = parseInt(this.getAttribute('data-id'));
+            deleteHistoryItem(id);
+        });
+    });
     
     displayPagination('historyPagination', pagination, loadHistory);
 }
@@ -907,7 +927,7 @@ function displaySaved(items, pagination) {
     }
     
     listEl.innerHTML = items.map(item => `
-        <div class="history-item">
+        <div class="history-item" data-item-id="${item.id}">
             <div class="history-item-header">
                 <div class="history-langs">⭐ ${item.sourceLang.toUpperCase()} → ${item.targetLang.toUpperCase()}</div>
                 <div class="history-date">${formatDate(item.updatedAt)}</div>
@@ -924,11 +944,31 @@ function displaySaved(items, pagination) {
             </div>
             ${item.note ? `<div class="saved-note">Note: ${escapeHtml(item.note)}</div>` : ''}
             <div class="history-actions">
-                <button class="history-btn" onclick="useSavedItem('${escapeHtml(item.sourceText)}', '${item.sourceLang}', '${item.targetLang}')">Use</button>
-                <button class="history-btn history-btn-delete" onclick="removeSavedItem(${item.id})">Remove</button>
+                <button class="history-btn saved-use-btn" 
+                    data-text="${escapeHtml(item.sourceText)}" 
+                    data-source-lang="${item.sourceLang}" 
+                    data-target-lang="${item.targetLang}">Use</button>
+                <button class="history-btn history-btn-delete saved-remove-btn" data-id="${item.id}">Remove</button>
             </div>
         </div>
     `).join('');
+    
+    // Add event delegation for buttons
+    listEl.querySelectorAll('.saved-use-btn').forEach(btn => {
+        btn.addEventListener('click', function() {
+            const text = this.getAttribute('data-text');
+            const sourceLang = this.getAttribute('data-source-lang');
+            const targetLang = this.getAttribute('data-target-lang');
+            useSavedItem(text, sourceLang, targetLang);
+        });
+    });
+    
+    listEl.querySelectorAll('.saved-remove-btn').forEach(btn => {
+        btn.addEventListener('click', function() {
+            const id = parseInt(this.getAttribute('data-id'));
+            removeSavedItem(id);
+        });
+    });
     
     displayPagination('savedPagination', pagination, loadSaved);
 }
@@ -943,14 +983,26 @@ function displayPagination(elementId, pagination, loadFunction) {
     }
     
     paginationEl.innerHTML = `
-        <button ${pagination.page <= 1 ? 'disabled' : ''} onclick="${loadFunction.name}(${pagination.page - 1})">
+        <button class="pagination-prev" ${pagination.page <= 1 ? 'disabled' : ''}>
             Previous
         </button>
         <span>Page ${pagination.page} of ${pagination.totalPages}</span>
-        <button ${pagination.page >= pagination.totalPages ? 'disabled' : ''} onclick="${loadFunction.name}(${pagination.page + 1})">
+        <button class="pagination-next" ${pagination.page >= pagination.totalPages ? 'disabled' : ''}>
             Next
         </button>
     `;
+    
+    // Add event listeners to pagination buttons
+    const prevBtn = paginationEl.querySelector('.pagination-prev');
+    const nextBtn = paginationEl.querySelector('.pagination-next');
+    
+    if (prevBtn && !prevBtn.disabled) {
+        prevBtn.addEventListener('click', () => loadFunction(pagination.page - 1));
+    }
+    
+    if (nextBtn && !nextBtn.disabled) {
+        nextBtn.addEventListener('click', () => loadFunction(pagination.page + 1));
+    }
 }
 
 // Delete history item
