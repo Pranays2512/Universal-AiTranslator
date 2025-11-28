@@ -2,6 +2,7 @@ const translate = require('google-translate-api-x');
 const { translationQueue, addTranslationJob, getQueueStats } = require('../queue/translationQueue.js');
 const Tesseract = require('tesseract.js');
 const cacheService = require('../services/cacheService');
+const historyService = require('../services/historyService');
 
 async function handleTranslate(req, res) {
     const { text, targetLang, sourceLang = 'auto' } = req.body;
@@ -14,11 +15,28 @@ async function handleTranslate(req, res) {
     }
 
     try {
-        // Check cache first if avaiavble
+        // Check cache first
         const cached = await cacheService.get(text, sourceLang, targetLang);
         
         if (cached) {
             console.log('✓ Serving translation from cache');
+            
+            // Save to history even if cached
+            try {
+                await historyService.saveTranslation({
+                    userId: req.user.id,
+                    originalText: text,
+                    translatedText: cached.translated,
+                    sourceLang: sourceLang,
+                    targetLang: targetLang,
+                    detectedLang: cached.sourceLang,
+                    source: 'text',
+                    metadata: { cached: true }
+                });
+            } catch (historyError) {
+                console.error('Failed to save to history:', historyError);
+            }
+
             return res.json({
                 success: true,
                 translation: cached.translated,
@@ -127,6 +145,23 @@ async function extractAndTranslate(req, res) {
         
         if (cached) {
             console.log('✓ Translation served from cache');
+            
+            // Save to history
+            try {
+                await historyService.saveTranslation({
+                    userId: req.user.id,
+                    originalText: extractedText,
+                    translatedText: cached.translated,
+                    sourceLang: sourceLang,
+                    targetLang: targetLang,
+                    detectedLang: cached.sourceLang,
+                    source: 'image',
+                    metadata: { cached: true, ocrExtracted: true }
+                });
+            } catch (historyError) {
+                console.error('Failed to save to history:', historyError);
+            }
+
             return res.json({
                 success: true,
                 extractedText,
@@ -142,10 +177,12 @@ async function extractAndTranslate(req, res) {
             to: targetLang 
         });
 
+        const detectedLang = result.from?.language?.iso || sourceLang;
+
         // Store in cache
         await cacheService.set(
             extractedText,
-            result.from?.language?.iso || sourceLang,
+            detectedLang,
             targetLang,
             result.text,
             { 
@@ -154,13 +191,29 @@ async function extractAndTranslate(req, res) {
             }
         );
 
+        // Save to history
+        try {
+            await historyService.saveTranslation({
+                userId: req.user.id,
+                originalText: extractedText,
+                translatedText: result.text,
+                sourceLang: sourceLang,
+                targetLang: targetLang,
+                detectedLang: detectedLang,
+                source: 'image',
+                metadata: { ocrExtracted: true }
+            });
+        } catch (historyError) {
+            console.error('Failed to save to history:', historyError);
+        }
+
         console.log('✓ OCR + Translation completed');
 
         res.json({
             success: true,
             extractedText,
             translation: result.text,
-            detectedLanguage: result.from?.language?.iso || 'unknown',
+            detectedLanguage: detectedLang,
             cached: false
         });
 
