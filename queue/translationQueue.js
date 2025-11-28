@@ -2,7 +2,7 @@ const Queue = require('bull');
 const translate = require('google-translate-api-x');
 const { redisConfig } = require('../config/redis.js');
 const cacheService = require('../services/cacheService');
-const { publish } = require('../services/pubsubService');
+const historyService = require('../services/historyService');
 
 // Create translation queue
 const translationQueue = new Queue('translation', {
@@ -18,7 +18,7 @@ const translationQueue = new Queue('translation', {
     }
 });
 
-// Dead Letter Queue for permanently failed jobs which stores fialed commits
+// Dead Letter Queue for permanently failed jobs
 const deadLetterQueue = new Queue('translation:failed', {
     redis: redisConfig,
     defaultJobOptions: {
@@ -39,6 +39,23 @@ translationQueue.process(async (job) => {
         
         if (cached) {
             console.log(`✓ Job ${job.id} served from cache`);
+            
+            // Save to history
+            try {
+                await historyService.saveTranslation({
+                    userId,
+                    originalText: text,
+                    translatedText: cached.translated,
+                    sourceLang,
+                    targetLang,
+                    detectedLang: cached.sourceLang,
+                    source: 'text',
+                    metadata: { cached: true, jobId: job.id }
+                });
+            } catch (historyError) {
+                console.error('Failed to save to history:', historyError);
+            }
+
             return {
                 translatedText: cached.translated,
                 detectedLanguage: cached.sourceLang,
@@ -69,6 +86,22 @@ translationQueue.process(async (job) => {
             }
         );
 
+        // Save to history
+        try {
+            await historyService.saveTranslation({
+                userId,
+                originalText: text,
+                translatedText: result.text,
+                sourceLang,
+                targetLang,
+                detectedLang,
+                source: 'text',
+                metadata: { jobId: job.id }
+            });
+        } catch (historyError) {
+            console.error('Failed to save to history:', historyError);
+        }
+
         console.log(`✓ Job ${job.id} completed and cached`);
         
         return {
@@ -87,16 +120,6 @@ translationQueue.process(async (job) => {
 // Queue event listeners
 translationQueue.on('completed', (job, result) => {
     console.log(`✓ Job ${job.id} completed successfully`);
-    try {
-        publish('translation.completed', {
-            jobId: job.id,
-            userId: result?.userId || job?.data?.userId,
-            originalText: job?.data?.text,
-            translatedText: result?.translatedText || result?.translated || (result && result.text)
-        });
-    } catch (e) {
-        console.error('Failed to publish translation.completed:', e && e.message ? e.message : e);
-    }
 });
 
 translationQueue.on('failed', async (job, err) => {
