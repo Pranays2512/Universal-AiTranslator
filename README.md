@@ -59,6 +59,25 @@ Open your browser and go to:
 
 http://localhost:3000
 
+Testing
+Run tests:
+
+npm test
+
+Run tests in watch mode:
+
+npm run test:watch
+
+Run only unit tests:
+
+npm run test:unit
+
+Run only integration tests:
+
+npm run test:integration
+
+For more details, see [TESTING.md](TESTING.md)
+
 Usage
 Sign up for a new account or sign in if you already have one.
 

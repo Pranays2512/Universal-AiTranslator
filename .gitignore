@@ -67,3 +67,8 @@ dump.rdb
 # Bull queue data
 .bull/
 *.traineddata
+
+# Testing
+coverage/
+.nyc_output/
+*.test.js.snap
