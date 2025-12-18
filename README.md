@@ -113,3 +113,43 @@ Add support for audio input and output.
 Add user history of translations.
 
 Implement password reset functionality.
+
+Configuration Files
+✅ jest.config.js - Jest configuration
+✅ jest.setup.js - Test environment setup
+✅ .env.test - Test environment variables
+✅ package.json - Updated with test scripts and dependencies
+Unit Tests (unit)
+cacheService.test.js - Cache operations
+historyService.test.js - History service
+translationController.test.js - Translation controller
+fileUploadController.test.js - File upload handling
+historyController.test.js - History controller
+middleware.test.js - Authentication middleware
+controller.test.js - User auth (signup/signin)
+translationQueue.test.js - Queue operations
+pubsubService.test.js - Pub/sub messaging
+socketHandler.test.js - WebSocket handling
+commonPhrases.test.js - Configuration
+environment.test.js - Environment validation
+
+Integration Tests (integration)
+routes.test.js - API endpoints
+health.test.js - Health checks
+cache.test.js - Cache API
+E2E Tests (e2e)
+userFlow.test.js - Complete user workflows
+Helper Files
+testUtils.js - Reusable test utilities
+mockFactory.js - Mock data generators
+Scripts
+test.js - Custom test runner
+Documentation
+TESTING.md - Testing guide
+TEST_COVERAGE.md - Coverage report
+
+npm test                  # Run all tests with coverage
+npm run test:watch       # Run in watch mode
+npm run test:unit        # Run only unit tests
+npm run test:integration # Run only integration tests
+node scripts/test.js -u  # Custom test runner for unit tests
