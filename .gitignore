@@ -67,3 +67,12 @@ dump.rdb
 # Bull queue data
 .bull/
 *.traineddata
+# Testing
+coverage/
+*.coverage
+.nyc_output/
+junit.xml
+
+# Test artifacts
+test-results/
+.test-cache/
