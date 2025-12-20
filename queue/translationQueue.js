@@ -136,7 +136,8 @@ translationQueue.on('stalled', (job) => {
 async function addTranslationJob(data) {
     const job = await translationQueue.add(data, {
         priority: data.priority || 5,
-        jobId: `${data.userId}-${Date.now()}`
+        // Ensure job IDs are unique even if calls happen within the same millisecond
+        jobId: `${data.userId}-${Date.now()}-${Math.random().toString(36).slice(2,9)}`
     });
     
     return job;
