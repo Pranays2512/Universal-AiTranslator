@@ -2,6 +2,15 @@ const { checkSignUp, checkSignIn, checkUser } = require('../../middleware/middle
 const jwt = require('jsonwebtoken');
 const { PrismaClient } = require('@prisma/client');
 
+/**
+ * Middleware Test Suite
+ * 
+ * Tests validation and authentication middleware functions:
+ * - checkSignUp: Validates user registration data
+ * - checkSignIn: Validates user login data  
+ * - checkUser: Verifies JWT token and user authentication
+ */
+
 // Mock PrismaClient
 jest.mock('@prisma/client', () => {
     const mockPrisma = {

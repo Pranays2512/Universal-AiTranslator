@@ -111,6 +111,31 @@ Redis client is mocked in tests to avoid requiring a running Redis instance.
 ### Mocking Database
 Prisma client is mocked to avoid requiring a test database.
 
+## Test Utilities
+
+The project includes helper utilities in `__tests__/helpers/`:
+
+### testUtils.js
+Provides common test setup and helper functions:
+- Database connection setup for tests
+- Mock data generators
+- Common assertions and matchers
+- Cleanup functions after tests
+
+### mockFactory.js
+Factory functions for creating mock objects:
+- Mock user objects
+- Mock translation data
+- Mock cache data
+- Mock history records
+
+Example usage:
+```javascript
+const { mockFactory } = require('../helpers/mockFactory');
+const mockUser = mockFactory.createMockUser();
+const mockTranslation = mockFactory.createMockTranslation();
+```
+
 ## Best Practices
 
 1. **Isolation**: Each test should be independent
@@ -119,6 +144,10 @@ Prisma client is mocked to avoid requiring a test database.
 4. **AAA Pattern**: Arrange, Act, Assert
 5. **Mock External Dependencies**: Mock APIs, databases, and external services
 6. **Coverage**: Aim for >80% code coverage
+7. **Test Organization**: Group related tests using `describe` blocks
+8. **Error Testing**: Test both success and error cases
+9. **Async Handling**: Use `async/await` or `.resolves` for promise-based tests
+10. **Setup and Teardown**: Properly initialize and clean up test data
 
 ## CI/CD Integration
 

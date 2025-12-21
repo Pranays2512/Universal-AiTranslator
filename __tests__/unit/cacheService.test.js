@@ -1,6 +1,17 @@
 const cacheService = require('../../services/cacheService');
 const { redisClient } = require('../../config/redis');
 
+/**
+ * Cache Service Test Suite
+ * 
+ * Comprehensive tests for caching layer functionality:
+ * - Key generation and consistency
+ * - Cache retrieval and storage
+ * - Expiration handling
+ * - Cache invalidation
+ * - Multi-language translation caching
+ */
+
 // Mock Redis client
 jest.mock('../../config/redis', () => ({
     redisClient: {

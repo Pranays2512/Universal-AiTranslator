@@ -166,5 +166,53 @@ describe('Controller', () => {
                 message: 'Invalid email or password'
             });
         });
+
+        it('should handle validation errors for missing email', async () => {
+            req.body = {
+                name: 'John Doe',
+                password: 'password123'
+                // missing email
+            };
+
+            await signIn(req, res);
+
+            expect(res.status).toHaveBeenCalledWith(400);
+        });
+
+        it('should handle database errors gracefully', async () => {
+            req.body = {
+                email: 'john@example.com',
+                password: 'password123'
+            };
+
+            prisma.user.findUnique.mockRejectedValue(new Error('Database error'));
+
+            await signIn(req, res);
+
+            expect(res.status).toHaveBeenCalledWith(500);
+        });
+
+        it('should return user data on successful authentication', async () => {
+            req.body = {
+                email: 'john@example.com',
+                password: 'password123'
+            };
+
+            const mockUser = {
+                id: 'user123',
+                email: 'john@example.com',
+                password: 'hashedPassword',
+                name: 'John Doe'
+            };
+
+            prisma.user.findUnique.mockResolvedValue(mockUser);
+            bcrypt.compare.mockResolvedValue(true);
+            jwt.sign.mockReturnValue('auth_token');
+
+            await signIn(req, res);
+
+            expect(res.status).toHaveBeenCalledWith(200);
+            expect(res.json).toHaveBeenCalled();
+        });
     });
 });
