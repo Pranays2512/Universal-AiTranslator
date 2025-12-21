@@ -205,6 +205,88 @@ describe('API Routes Integration Tests', () => {
                 expect(response.status).toBe(200);
                 expect(response.body).toHaveProperty('cached');
             });
+
+            it('should handle missing required fields', async () => {
+                const response = await request(app)
+                    .post('/translate')
+                    .send({
+                        text: 'hello'
+                    });
+
+                expect(response.status).toBe(400);
+            });
+
+            it('should handle translation errors gracefully', async () => {
+                cacheService.get.mockRejectedValue(new Error('Cache service error'));
+
+                const response = await request(app)
+                    .post('/translate')
+                    .send({
+                        text: 'hello',
+                        targetLang: 'es'
+                    });
+
+                expect(response.status).toBe(500);
+            });
+        });
+    });
+
+    describe('History Routes', () => {
+        describe('GET /history', () => {
+            it('should retrieve user translation history', async () => {
+                const mockHistory = {
+                    rows: [
+                        {
+                            id: 1,
+                            originalText: 'hello',
+                            translatedText: 'hola',
+                            createdAt: new Date()
+                        }
+                    ],
+                    count: 1
+                };
+
+                historyService.getHistory.mockResolvedValue(mockHistory);
+
+                const response = await request(app)
+                    .get('/history')
+                    .set('Authorization', 'Bearer token');
+
+                expect(response.status).toBe(200);
+            });
+
+            it('should handle pagination', async () => {
+                const mockHistory = { rows: [], count: 0 };
+                historyService.getHistory.mockResolvedValue(mockHistory);
+
+                const response = await request(app)
+                    .get('/history?page=1&limit=10')
+                    .set('Authorization', 'Bearer token');
+
+                expect(response.status).toBe(200);
+            });
+        });
+
+        describe('DELETE /history/:id', () => {
+            it('should delete translation history entry', async () => {
+                historyService.deleteTranslation.mockResolvedValue(1);
+
+                const response = await request(app)
+                    .delete('/history/1')
+                    .set('Authorization', 'Bearer token');
+
+                expect(response.status).toBe(200);
+            });
+
+            it('should return 404 if entry not found', async () => {
+                historyService.deleteTranslation.mockResolvedValue(0);
+
+                const response = await request(app)
+                    .delete('/history/999')
+                    .set('Authorization', 'Bearer token');
+
+                expect(response.status).toMatch(/404|400/);
+            });
         });
     });
 
@@ -214,6 +296,18 @@ describe('API Routes Integration Tests', () => {
                 const response = await request(app).get('/health');
 
                 expect(response.status).toBe(200);
+            });
+
+            it('should verify database connection', async () => {
+                const response = await request(app).get('/health');
+
+                expect(response.body).toHaveProperty('database');
+            });
+
+            it('should verify redis connection', async () => {
+                const response = await request(app).get('/health');
+
+                expect(response.body).toHaveProperty('redis');
             });
         });
     });
