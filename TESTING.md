@@ -11,9 +11,30 @@ __tests__/
 │   ├── cacheService.test.js
 │   ├── historyService.test.js
 │   ├── translationController.test.js
-│   └── middleware.test.js
-└── integration/    # Integration tests for API endpoints
-    └── routes.test.js
+│   ├── fileUploadController.test.js
+│   ├── historyController.test.js
+│   ├── middleware.test.js
+│   ├── controller.test.js
+│   ├── translationQueue.test.js
+│   ├── pubsubService.test.js
+│   ├── socketHandler.test.js
+│   ├── commonPhrases.test.js
+│   └── environment.test.js
+├── integration/    # Integration tests for API endpoints
+│   ├── routes.test.js
+│   ├── health.test.js
+│   └── cache.test.js
+├── functional/     # Functional tests for features
+│   ├── translation.test.js
+│   ├── ocr.test.js
+│   ├── authentication.test.js
+│   ├── cache.test.js
+│   └── fileUpload.test.js
+├── e2e/            # End-to-end tests
+│   └── userFlow.test.js
+└── helpers/        # Test utilities
+    ├── testUtils.js
+    └── mockFactory.js
 ```
 
 ## Running Tests
@@ -36,6 +57,21 @@ npm run test:unit
 ### Run only integration tests
 ```bash
 npm run test:integration
+```
+
+### Run only functional tests
+```bash
+npm run test:functional
+```
+
+### Run only e2e tests
+```bash
+npm run test:e2e
+```
+
+### Run all tests with verbose output
+```bash
+npm run test:all
 ```
 
 ### Run with coverage report
