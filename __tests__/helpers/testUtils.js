@@ -102,6 +102,78 @@ function createMockUser(overrides = {}) {
     };
 }
 
+/**
+ * Create mock cache entry
+ */
+function createMockCacheEntry(overrides = {}) {
+    return {
+        translated: 'Hola',
+        cached: true,
+        timestamp: new Date(),
+        ...overrides
+    };
+}
+
+/**
+ * Create mock error response
+ */
+function createErrorResponse(statusCode, message, errorDetails = {}) {
+    return {
+        statusCode,
+        data: {
+            success: false,
+            error: message,
+            details: errorDetails
+        }
+    };
+}
+
+/**
+ * Assert response structure
+ */
+function assertSuccessResponse(response, expectedData = {}) {
+    expect(response.statusCode).toBe(200);
+    expect(response.data).toHaveProperty('success', true);
+    Object.entries(expectedData).forEach(([key, value]) => {
+        expect(response.data).toHaveProperty(key, value);
+    });
+}
+
+/**
+ * Assert error response structure
+ */
+function assertErrorResponse(response, statusCode, errorMessage = null) {
+    expect(response.statusCode).toBe(statusCode);
+    expect(response.data).toHaveProperty('success', false);
+    if (errorMessage) {
+        expect(response.data).toHaveProperty('error', errorMessage);
+    }
+}
+
+/**
+ * Create mock history data
+ */
+function createMockHistoryEntry(overrides = {}) {
+    return {
+        id: 1,
+        userId: 'test-user',
+        originalText: 'Test text',
+        translatedText: 'Texto de prueba',
+        sourceLang: 'en',
+        targetLang: 'es',
+        createdAt: new Date(),
+        ...overrides
+    };
+}
+
+/**
+ * Clear all mocks and reset state
+ */
+function resetAllMocks() {
+    jest.clearAllMocks();
+    jest.resetAllMocks();
+}
+
 module.exports = {
     createMockRequest,
     createMockResponse,
@@ -109,5 +181,11 @@ module.exports = {
     wait,
     createMockToken,
     createMockTranslation,
-    createMockUser
+    createMockUser,
+    createMockCacheEntry,
+    createErrorResponse,
+    assertSuccessResponse,
+    assertErrorResponse,
+    createMockHistoryEntry,
+    resetAllMocks
 };

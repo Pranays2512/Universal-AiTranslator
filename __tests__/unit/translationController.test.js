@@ -173,5 +173,58 @@ describe('TranslationController', () => {
                 error: 'Texts array cannot be empty'
             });
         });
+
+        it('should handle translation queue jobs', async () => {
+            req.body = {
+                text: 'hello world',
+                targetLang: 'es'
+            };
+
+            cacheService.get.mockResolvedValue(null);
+            addTranslationJob.mockResolvedValue({ id: 'job123' });
+
+            await translationController.handleTranslate(req, res);
+
+            expect(addTranslationJob).toHaveBeenCalled();
+        });
+
+        it('should handle errors in translation process', async () => {
+            req.body = {
+                text: 'hello',
+                targetLang: 'es'
+            };
+
+            cacheService.get.mockRejectedValue(new Error('Cache error'));
+
+            await translationController.handleTranslate(req, res);
+
+            expect(res.status).toHaveBeenCalledWith(500);
+        });
+
+        it('should validate language codes', async () => {
+            req.body = {
+                text: 'hello',
+                targetLang: 'invalid',
+                sourceLang: 'xx'
+            };
+
+            await translationController.handleTranslate(req, res);
+
+            expect(res.status).toHaveBeenCalled();
+        });
+
+        it('should handle very long text gracefully', async () => {
+            const longText = 'a'.repeat(10000);
+            req.body = {
+                text: longText,
+                targetLang: 'es'
+            };
+
+            cacheService.get.mockResolvedValue(null);
+
+            await translationController.handleTranslate(req, res);
+
+            expect(res.status).toHaveBeenCalled();
+        });
     });
 });
